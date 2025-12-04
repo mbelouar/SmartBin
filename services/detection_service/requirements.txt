@@ -1,0 +1,2 @@
+# Python dependencies for detection service (Django, DRF, paho-mqtt, etc.)
+

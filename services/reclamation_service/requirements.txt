@@ -1,0 +1,2 @@
+# Python dependencies for reclamation service (Django, DRF, etc.)
+

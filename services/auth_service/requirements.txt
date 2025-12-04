@@ -1,0 +1,2 @@
+# Python dependencies for authentication service (Django, DRF, JWT libraries, etc.)
+

@@ -1,0 +1,1 @@
+# Orchestrates all services (Django microservices, MQTT broker, Node-RED, frontend, databases)
