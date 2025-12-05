@@ -1,2 +1,14 @@
-# Python dependencies for gateway service (Django, DRF, HTTP client libraries)
+# Django and REST Framework
+Django==4.2.7
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.0
 
+# CORS
+django-cors-headers==4.3.1
+
+# HTTP client for proxying
+requests==2.31.0
+httpx==0.25.2
+
+# Environment variables
+python-decouple==3.8

@@ -1,0 +1,47 @@
+version: '3.8'
+
+# Minimal docker-compose for testing infrastructure only
+# Tests: PostgreSQL and Mosquitto MQTT broker
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: smartbin_postgres_test
+    environment:
+      POSTGRES_DB: smartbin_db
+      POSTGRES_USER: smartbin_user
+      POSTGRES_PASSWORD: smartbin_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - smartbin_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartbin_user -d smartbin_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MQTT Broker (Mosquitto)
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: smartbin_mosquitto_test
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./infrastructure/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./infrastructure/mosquitto/passwords.txt:/mosquitto/config/passwords.txt
+    networks:
+      - smartbin_network
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  smartbin_network:
+    driver: bridge

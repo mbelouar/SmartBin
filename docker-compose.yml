@@ -1,1 +1,215 @@
-# Orchestrates all services (Django microservices, MQTT broker, Node-RED, frontend, databases)
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: smartbin_postgres
+    environment:
+      POSTGRES_DB: smartbin_db
+      POSTGRES_USER: smartbin_user
+      POSTGRES_PASSWORD: smartbin_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - smartbin_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartbin_user -d smartbin_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MQTT Broker (Mosquitto)
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: smartbin_mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./infrastructure/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./infrastructure/mosquitto/passwords.txt:/mosquitto/config/passwords.txt
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    networks:
+      - smartbin_network
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service
+  auth_service:
+    build:
+      context: ./services/auth_service
+      dockerfile: Dockerfile
+    container_name: smartbin_auth
+    environment:
+      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartbin_network
+    volumes:
+      - ./services/auth_service:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Bin Service
+  bin_service:
+    build:
+      context: ./services/bin_service
+      dockerfile: Dockerfile
+    container_name: smartbin_bin_service
+    environment:
+      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - smartbin_network
+    volumes:
+      - ./services/bin_service:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Detection Service
+  detection_service:
+    build:
+      context: ./services/detection_service
+      dockerfile: Dockerfile
+    container_name: smartbin_detection
+    environment:
+      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - AUTH_SERVICE_URL=http://auth_service:8000
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - smartbin_network
+    volumes:
+      - ./services/detection_service:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python mqtt/mqtt_client.py &
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Reclamation Service
+  reclamation_service:
+    build:
+      context: ./services/reclamation_service
+      dockerfile: Dockerfile
+    container_name: smartbin_reclamation
+    environment:
+      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartbin_network
+    volumes:
+      - ./services/reclamation_service:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # API Gateway
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: smartbin_gateway
+    environment:
+      - AUTH_SERVICE_URL=http://auth_service:8000
+      - BIN_SERVICE_URL=http://bin_service:8000
+      - DETECTION_SERVICE_URL=http://detection_service:8000
+      - RECLAMATION_SERVICE_URL=http://reclamation_service:8000
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth_service
+      - bin_service
+      - detection_service
+      - reclamation_service
+    networks:
+      - smartbin_network
+    volumes:
+      - ./gateway:/app
+
+  # Node-RED
+  node_red:
+    build:
+      context: ./node-red
+      dockerfile: Dockerfile
+    container_name: smartbin_nodered
+    environment:
+      - TZ=UTC
+      - NODE_RED_ENABLE_PROJECTS=true
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./node-red/data:/data
+      - node_red_data:/data
+    networks:
+      - smartbin_network
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartbin_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+    networks:
+      - smartbin_network
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+
+networks:
+  smartbin_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_logs:
+  node_red_data:
