@@ -20,17 +20,55 @@ logger = logging.getLogger(__name__)
 class BinViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Bin CRUD operations
+    Only admins can create/update/delete bins
+    Users can view bins
     """
     queryset = Bin.objects.all()
     serializer_class = BinSerializer
-    permission_classes = [permissions.AllowAny]  # Changed for microservice communication
+    
+    def get_permissions(self):
+        """
+        Only admins can create, update, or delete bins
+        Everyone can view bins
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
     
     def get_queryset(self):
-        """Filter bins by status if provided"""
+        """Filter bins by status and location"""
         queryset = super().get_queryset()
+        
+        # Filter by status
         status_filter = self.request.query_params.get('status', None)
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+        
+        # Filter by coordinates (nearby bins)
+        lat = self.request.query_params.get('latitude', None)
+        lon = self.request.query_params.get('longitude', None)
+        radius = self.request.query_params.get('radius', 5)  # default 5km
+        
+        if lat and lon:
+            # Simple distance filter (for production, use PostGIS)
+            # This is a rough approximation
+            try:
+                from decimal import Decimal
+                lat = Decimal(lat)
+                lon = Decimal(lon)
+                radius = Decimal(radius)
+                
+                # Rough calculation: 1 degree ≈ 111km
+                lat_range = radius / Decimal('111')
+                lon_range = radius / Decimal('111')
+                
+                queryset = queryset.filter(
+                    latitude__range=(lat - lat_range, lat + lat_range),
+                    longitude__range=(lon - lon_range, lon + lon_range)
+                )
+            except:
+                pass
+        
         return queryset
     
     @action(detail=True, methods=['post'], url_path='open')
