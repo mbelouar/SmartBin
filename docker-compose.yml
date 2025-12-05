@@ -188,20 +188,21 @@ services:
       mosquitto:
         condition: service_healthy
 
-  # Frontend
+  # Frontend (Web UI)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: nginx:alpine
     container_name: smartbin_frontend
     ports:
       - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
     depends_on:
-      - gateway
+      - auth_service
+      - bin_service
+      - detection_service
+      - reclamation_service
     networks:
       - smartbin_network
-    volumes:
-      - ./frontend:/usr/share/nginx/html
 
 networks:
   smartbin_network:

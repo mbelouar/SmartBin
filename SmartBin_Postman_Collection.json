@@ -29,6 +29,16 @@
 			"key": "bin_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "reclamation_url",
+			"value": "http://localhost:8004",
+			"type": "string"
+		},
+		{
+			"key": "reclamation_id",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -367,6 +377,195 @@
 									"value": "{{bin_id}}"
 								}
 							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reclamation Service (Port 8004)",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/health/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "health", ""]
+						}
+					}
+				},
+				{
+					"name": "Create Reclamation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('reclamation_id', jsonData.id);",
+									"    console.log('✅ Reclamation ID saved:', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_qr_code\": \"SB-{{user_id}}\",\n    \"bin_id\": \"{{bin_id}}\",\n    \"reclamation_type\": \"full\",\n    \"title\": \"Bin is overflowing\",\n    \"message\": \"The bin at this location is completely full and trash is falling out. Please empty it soon.\",\n    \"location\": \"Main Street & 5th Ave\",\n    \"priority\": \"high\"\n}"
+						},
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "List All Reclamations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Reclamation by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/{{reclamation_id}}/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", "{{reclamation_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Reclamations by User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/?user_qr_code=SB-{{user_id}}",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", ""],
+							"query": [
+								{
+									"key": "user_qr_code",
+									"value": "SB-{{user_id}}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Reclamations by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/?status=pending",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", ""],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Options: pending, in_progress, resolved, rejected"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Reclamations by Bin",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/?bin_id={{bin_id}}",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", ""],
+							"query": [
+								{
+									"key": "bin_id",
+									"value": "{{bin_id}}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Reclamation Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"in_progress\",\n    \"priority\": \"high\",\n    \"admin_notes\": \"Assigned to maintenance team\"\n}"
+						},
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/{{reclamation_id}}/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", "{{reclamation_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Resolve Reclamation",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/{{reclamation_id}}/resolve/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", "{{reclamation_id}}", "resolve", ""]
+						}
+					}
+				},
+				{
+					"name": "Set Reclamation In Progress",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/{{reclamation_id}}/in-progress/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", "{{reclamation_id}}", "in-progress", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Reclamation Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{reclamation_url}}/api/reclamations/list/stats/",
+							"host": ["{{reclamation_url}}"],
+							"path": ["api", "reclamations", "list", "stats", ""]
 						}
 					}
 				}
