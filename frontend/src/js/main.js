@@ -241,17 +241,13 @@ async function loadDashboard() {
         }
 
         // Load bins count
-        const binsResponse = await fetch(`${API_URLS.bins}/list/`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const binsResponse = await fetch(`${API_URLS.bins}/list/`);
         const bins = await binsResponse.json();
         document.getElementById('total-bins').textContent = bins.results?.length || bins.length || 0;
 
         // Load detections count
         try {
-            const detectionsResponse = await fetch(`${API_URLS.detections}/list/`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const detectionsResponse = await fetch(`${API_URLS.detections}/list/`);
             const detections = await detectionsResponse.json();
             document.getElementById('total-detections').textContent = detections.results?.length || detections.length || 0;
         } catch (e) {
@@ -259,9 +255,7 @@ async function loadDashboard() {
         }
 
         // Load reclamations count
-        const reclamationsResponse = await fetch(`${API_URLS.reclamations}/list/`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const reclamationsResponse = await fetch(`${API_URLS.reclamations}/list/`);
         const reclamations = await reclamationsResponse.json();
         document.getElementById('total-reclamations').textContent = reclamations.results?.length || reclamations.length || 0;
 
@@ -303,14 +297,18 @@ function displayRecentActivity(activities) {
 // ==================== BINS ====================
 async function loadBins() {
     try {
-        const response = await fetch(`${API_URLS.bins}/list/`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const response = await fetch(`${API_URLS.bins}/list/`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         const bins = data.results || data;
         displayBins(bins);
     } catch (error) {
         console.error('Bins load error:', error);
+        document.getElementById('bins-list').innerHTML = '<p class="text-muted">Error loading bins. Please try again.</p>';
         showToast('Error loading bins', 'error');
     }
 }
@@ -394,14 +392,18 @@ async function closeBin(binId) {
 // ==================== RECLAMATIONS ====================
 async function loadReclamations() {
     try {
-        const response = await fetch(`${API_URLS.reclamations}/list/`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const response = await fetch(`${API_URLS.reclamations}/list/`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         const reclamations = data.results || data;
         displayReclamations(reclamations);
     } catch (error) {
         console.error('Reclamations load error:', error);
+        document.getElementById('reclamations-list').innerHTML = '<p class="text-muted">Error loading reclamations. Please try again.</p>';
         showToast('Error loading reclamations', 'error');
     }
 }
