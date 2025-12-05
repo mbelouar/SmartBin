@@ -1,13 +1,18 @@
 {
 	"info": {
 		"name": "SmartBin API",
-		"description": "Complete API collection for SmartBin smart trash management system",
+		"description": "Complete API collection for SmartBin - All Services",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
-			"key": "base_url",
+			"key": "auth_url",
 			"value": "http://localhost:8001",
+			"type": "string"
+		},
+		{
+			"key": "bin_url",
+			"value": "http://localhost:8002",
 			"type": "string"
 		},
 		{
@@ -19,11 +24,16 @@
 			"key": "user_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "bin_id",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
 		{
-			"name": "Auth Service",
+			"name": "Auth Service (Port 8001)",
 			"item": [
 				{
 					"name": "Health Check",
@@ -31,8 +41,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/auth/health/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/health/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "health", ""]
 						}
 					}
@@ -48,8 +58,8 @@
 									"    var jsonData = pm.response.json();",
 									"    pm.collectionVariables.set('access_token', jsonData.tokens.access);",
 									"    pm.collectionVariables.set('user_id', jsonData.user.id);",
-									"    console.log('Token saved:', jsonData.tokens.access);",
-									"    console.log('User ID saved:', jsonData.user.id);",
+									"    console.log('✅ Token saved');",
+									"    console.log('✅ User ID saved');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -69,8 +79,8 @@
 							"raw": "{\n    \"username\": \"john_doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"secure123\",\n    \"password_confirm\": \"secure123\",\n    \"phone_number\": \"+1234567890\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/auth/register/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/register/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "register", ""]
 						}
 					}
@@ -86,7 +96,7 @@
 									"    var jsonData = pm.response.json();",
 									"    pm.collectionVariables.set('access_token', jsonData.tokens.access);",
 									"    pm.collectionVariables.set('user_id', jsonData.user.id);",
-									"    console.log('Token saved:', jsonData.tokens.access);",
+									"    console.log('✅ Token saved');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -106,8 +116,8 @@
 							"raw": "{\n    \"username\": \"john_doe\",\n    \"password\": \"secure123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/auth/login/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/login/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "login", ""]
 						}
 					}
@@ -128,39 +138,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/auth/profile/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "auth", "profile", ""]
-						}
-					}
-				},
-				{
-					"name": "Update User Profile",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{access_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone_number\": \"+9876543210\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/auth/profile/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/profile/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "profile", ""]
 						}
 					}
@@ -190,8 +169,8 @@
 							"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"amount\": 15,\n    \"description\": \"Detected plastic waste\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/auth/points/add/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/points/add/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "points", "add", ""]
 						}
 					}
@@ -212,14 +191,46 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/auth/points/history/",
-							"host": ["{{base_url}}"],
+							"raw": "{{auth_url}}/api/auth/points/history/",
+							"host": ["{{auth_url}}"],
 							"path": ["api", "auth", "points", "history", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Bin Service (Port 8002)",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/health/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "health", ""]
 						}
 					}
 				},
 				{
-					"name": "Refresh Token",
+					"name": "Create Bin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('bin_id', jsonData.id);",
+									"    console.log('✅ Bin ID saved:', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -230,12 +241,132 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"refresh\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+							"raw": "{\n    \"name\": \"Main Street Bin #1\",\n    \"qr_code\": \"BIN-001\",\n    \"location\": \"Main Street & 5th Ave\",\n    \"latitude\": 40.7128,\n    \"longitude\": -74.0060,\n    \"capacity\": 100,\n    \"status\": \"active\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/auth/token/refresh/",
-							"host": ["{{base_url}}"],
-							"path": ["api", "auth", "token", "refresh", ""]
+							"raw": "{{bin_url}}/api/bins/list/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "List All Bins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/list/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Bin by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/list/{{bin_id}}/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", "{{bin_id}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Bin by QR Code",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/qr/BIN-001/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "qr", "BIN-001", ""]
+						}
+					}
+				},
+				{
+					"name": "Open Bin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_qr_code\": \"SB-{{user_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{bin_url}}/api/bins/list/{{bin_id}}/open/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", "{{bin_id}}", "open", ""]
+						}
+					}
+				},
+				{
+					"name": "Close Bin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/list/{{bin_id}}/close/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", "{{bin_id}}", "close", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Fill Level",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fill_level\": 75\n}"
+						},
+						"url": {
+							"raw": "{{bin_url}}/api/bins/list/{{bin_id}}/update-fill-level/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "list", "{{bin_id}}", "update-fill-level", ""]
+						}
+					}
+				},
+				{
+					"name": "View Usage Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/usage-logs/",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "usage-logs", ""]
+						}
+					}
+				},
+				{
+					"name": "View Usage Logs by Bin",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{bin_url}}/api/bins/usage-logs/?bin_id={{bin_id}}",
+							"host": ["{{bin_url}}"],
+							"path": ["api", "bins", "usage-logs", ""],
+							"query": [
+								{
+									"key": "bin_id",
+									"value": "{{bin_id}}"
+								}
+							]
 						}
 					}
 				}
