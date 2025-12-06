@@ -56,31 +56,15 @@
                         <p>Smart Waste Management System</p>
                     </div>
 
-                    <!-- Login Form -->
-                    <div id="login-form" class="auth-form">
-                        <h2>Login</h2>
-                        <div class="form-group">
-                            <label><i class="fas fa-user"></i> Username</label>
-                            <input type="text" id="login-username" placeholder="Enter username" required>
-                        </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-lock"></i> Password</label>
-                            <input type="password" id="login-password" placeholder="Enter password" required>
-                        </div>
-                        <button class="btn btn-primary btn-block" id="login-submit">
-                            <i class="fas fa-sign-in-alt"></i> Login
-                        </button>
-                        <p class="auth-switch">
-                            Don't have an account? <a href="#" id="show-register">Register here</a>
+                    <!-- Register Form (Default) -->
+                    <div id="register-form" class="auth-form">
+                        <h2>Create Account</h2>
+                        <p class="text-muted" style="text-align: center; margin-bottom: 1.5rem;">
+                            New to SmartBin? Create your account to start earning points!
                         </p>
-                    </div>
-
-                    <!-- Register Form -->
-                    <div id="register-form" class="auth-form" style="display: none;">
-                        <h2>Register</h2>
                         <div class="form-group">
                             <label><i class="fas fa-user"></i> Username</label>
-                            <input type="text" id="register-username" placeholder="Choose username" required>
+                            <input type="text" id="register-username" placeholder="Choose a username" required>
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-envelope"></i> Email</label>
@@ -88,17 +72,40 @@
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-lock"></i> Password</label>
-                            <input type="password" id="register-password" placeholder="Choose password" required>
+                            <input type="password" id="register-password" placeholder="Choose a secure password" required>
+                            <small class="text-muted">Minimum 8 characters</small>
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-lock"></i> Confirm Password</label>
-                            <input type="password" id="register-password-confirm" placeholder="Confirm password" required>
+                            <input type="password" id="register-password-confirm" placeholder="Confirm your password" required>
                         </div>
                         <button class="btn btn-primary btn-block" id="register-submit">
-                            <i class="fas fa-user-plus"></i> Register
+                            <i class="fas fa-user-plus"></i> Create Account
                         </button>
                         <p class="auth-switch">
                             Already have an account? <a href="#" id="show-login">Login here</a>
+                        </p>
+                    </div>
+
+                    <!-- Login Form -->
+                    <div id="login-form" class="auth-form" style="display: none;">
+                        <h2>Welcome Back</h2>
+                        <p class="text-muted" style="text-align: center; margin-bottom: 1.5rem;">
+                            Login to access your account and view your points
+                        </p>
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Username</label>
+                            <input type="text" id="login-username" placeholder="Enter your username" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="login-password" placeholder="Enter your password" required>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="login-submit">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <p class="auth-switch">
+                            Don't have an account? <a href="#" id="show-register">Create account</a>
                         </p>
                     </div>
                 </div>
@@ -184,9 +191,16 @@
         <div class="page" id="bins-page">
             <div class="page-header">
                 <h1><i class="fas fa-trash-alt"></i> Smart Bins</h1>
-                <button class="btn btn-primary" id="add-bin-btn">
-                    <i class="fas fa-plus"></i> Add Bin
+                <button class="btn btn-primary" id="add-bin-btn" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Bin (Admin Only)
                 </button>
+            </div>
+            <div id="admin-info" style="display: none; background: #e3f2fd; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                <p style="margin: 0;">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Admin Mode:</strong> You can manage bins. 
+                    <a href="http://localhost:8002/admin/" target="_blank">Open Admin Panel</a>
+                </p>
             </div>
 
             <div id="bins-list" class="bins-grid">

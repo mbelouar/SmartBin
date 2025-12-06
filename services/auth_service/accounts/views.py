@@ -27,13 +27,15 @@ class RegisterView(APIView):
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             
+            # Ensure QR code is generated and saved
+            if not user.qr_code:
+                user.generate_qr_code()
+            
             return Response({
                 'message': 'User registered successfully',
                 'user': UserSerializer(user).data,
-                'tokens': {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                }
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -58,10 +60,8 @@ class LoginView(APIView):
                 return Response({
                     'message': 'Login successful',
                     'user': UserSerializer(user).data,
-                    'tokens': {
-                        'refresh': str(refresh),
-                        'access': str(refresh.access_token),
-                    }
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
                 }, status=status.HTTP_200_OK)
             
             return Response({

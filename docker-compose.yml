@@ -204,6 +204,24 @@ services:
     networks:
       - smartbin_network
 
+  # pgAdmin - Database Visualization Tool
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smartbin_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@smartbin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - smartbin_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 networks:
   smartbin_network:
     driver: bridge
@@ -213,3 +231,4 @@ volumes:
   mosquitto_data:
   mosquitto_logs:
   node_red_data:
+  pgadmin_data:

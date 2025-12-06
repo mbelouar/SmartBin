@@ -198,6 +198,7 @@ urls: ## Display all service URLs
 	@echo "  $(GREEN)PostgreSQL:        $(NC) localhost:5432"
 	@echo ""
 	@echo "$(YELLOW)📝 Admin Panels:$(NC)"
+	@echo "  $(GREEN)pgAdmin (Database): $(NC) http://localhost:5050"
 	@echo "  $(GREEN)Bin Admin:         $(NC) http://localhost:8002/admin/"
 	@echo "  $(GREEN)Auth Admin:        $(NC) http://localhost:8001/admin/"
 	@echo ""
@@ -308,3 +309,6 @@ diagnose: ## Run diagnostics
 	@echo ""
 	@echo "$(YELLOW)Disk Usage:$(NC)"
 	@docker system df
+
+verify-db: ## Verify database contains users and data
+	@./verify_database.sh

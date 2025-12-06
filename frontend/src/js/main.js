@@ -91,10 +91,14 @@ async function handleLogin() {
             currentUser = data.user;
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            showToast('Login successful!', 'success');
+            showToast(`Welcome back, ${data.user.username}!`, 'success');
+            // Clear form
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
             showDashboard();
         } else {
-            showToast(data.error || 'Login failed', 'error');
+            const errorMsg = data.detail || data.error || 'Invalid username or password. Please try again.';
+            showToast(errorMsg, 'error');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -137,11 +141,20 @@ async function handleRegister() {
             currentUser = data.user;
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            showToast('Registration successful!', 'success');
+            showToast('🎉 Account created successfully! You are now logged in.', 'success');
+            // Clear form
+            document.getElementById('register-username').value = '';
+            document.getElementById('register-email').value = '';
+            document.getElementById('register-password').value = '';
+            document.getElementById('register-password-confirm').value = '';
             showDashboard();
         } else {
-            const errorMsg = data.error || data.username?.[0] || data.email?.[0] || 'Registration failed';
-            showToast(errorMsg, 'error');
+            let errorMsg = 'Registration failed. ';
+            if (data.username) errorMsg += `Username: ${data.username[0]} `;
+            if (data.email) errorMsg += `Email: ${data.email[0]} `;
+            if (data.password) errorMsg += `Password: ${data.password[0]} `;
+            if (data.error) errorMsg = data.error;
+            showToast(errorMsg || 'Registration failed. Please check your information.', 'error');
         }
     } catch (error) {
         console.error('Registration error:', error);
@@ -224,10 +237,23 @@ async function loadDashboard() {
         });
         const profile = await profileResponse.json();
         currentUser = profile;
+        
+        // Check if user is admin (staff/superuser)
+        const isAdmin = (profile.is_staff === true) || (profile.is_superuser === true);
+        currentUser.isAdmin = isAdmin;
+        
+        // Store admin status for later use
+        localStorage.setItem('isAdmin', isAdmin);
 
         // Update stats
         document.getElementById('user-points').textContent = profile.points || 0;
         document.getElementById('user-qr-code').textContent = profile.qr_code || 'No QR Code';
+        
+        // Show admin features if admin
+        if (isAdmin) {
+            // Admin users can see admin features
+            console.log('Admin user detected');
+        }
 
         // Generate QR Code
         const qrContainer = document.getElementById('qr-code-canvas');
@@ -297,6 +323,20 @@ function displayRecentActivity(activities) {
 // ==================== BINS ====================
 async function loadBins() {
     try {
+        // Check if user is admin
+        const isAdmin = currentUser?.isAdmin || false;
+        const addBinBtn = document.getElementById('add-bin-btn');
+        const adminInfo = document.getElementById('admin-info');
+        
+        // Show/hide admin features
+        if (isAdmin) {
+            addBinBtn.style.display = 'inline-flex';
+            adminInfo.style.display = 'block';
+        } else {
+            addBinBtn.style.display = 'none';
+            adminInfo.style.display = 'none';
+        }
+        
         const response = await fetch(`${API_URLS.bins}/list/`);
         
         if (!response.ok) {
