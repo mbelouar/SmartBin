@@ -6,6 +6,10 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import dj_database_url
+import pymysql
+
+# Use PyMySQL as MySQL driver
+pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -70,7 +74,7 @@ WSGI_APPLICATION = 'auth_service.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'postgresql://smartbin_user:smartbin_pass@localhost:5432/smartbin_db'),
+        default=os.environ.get('DATABASE_URL', 'mysql://smartbin_user:smartbin_pass@localhost:3306/smartbin_db'),
         conn_max_age=600
     )
 }

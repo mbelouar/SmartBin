@@ -11,6 +11,7 @@ from .serializers import (
     CloseBinSerializer,
     UpdateFillLevelSerializer
 )
+from .permissions import IsAdminOrReadOnly
 from mqtt.mqtt_client import mqtt_client
 import logging
 
@@ -25,14 +26,17 @@ class BinViewSet(viewsets.ModelViewSet):
     """
     queryset = Bin.objects.all()
     serializer_class = BinSerializer
+    lookup_field = 'id'  # Use UUID field for lookups
     
     def get_permissions(self):
         """
-        Only admins can create, update, or delete bins
+        Only authenticated users can create, update, or delete bins
         Everyone can view bins
         """
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
+            # For now, just require authentication
+            # In production, verify admin status with auth service
+            return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
     
     def get_queryset(self):

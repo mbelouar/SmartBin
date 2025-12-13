@@ -5,11 +5,11 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    postgresql-client \
+    default-libmysqlclient-dev \
+    mariadb-client \
     gcc \
     python3-dev \
-    musl-dev \
-    libpq-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies

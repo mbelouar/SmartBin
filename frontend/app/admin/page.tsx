@@ -1,20 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { AdminDashboard } from "@/components/admin-dashboard"
 import { SmartBinLogo } from "@/components/smartbin-logo"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { getUser } from "@/lib/api"
+import { Home, LogOut, User } from "lucide-react"
+import { authApi, getUser, isAuthenticated } from "@/lib/api"
 
 export default function AdminPage() {
+  const router = useRouter()
+  const [isAuth, setIsAuth] = useState(false)
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
+    const authenticated = isAuthenticated()
     const currentUser = getUser()
+    setIsAuth(authenticated)
     setUser(currentUser)
   }, [])
+
+  const handleLogout = () => {
+    authApi.logout()
+    router.push("/login")
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -31,13 +40,38 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <Button variant="outline" className="gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Dashboard</span>
+            <div className="flex items-center gap-2">
+              {isAuth && user && (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">{user.username}</span>
+                  {user.is_staff && (
+                    <span className="text-xs text-primary font-semibold ml-1">(Admin)</span>
+                  )}
+                </div>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/")}
+                className="gap-2 border-primary/30 hover:bg-primary/10"
+              >
+                <Home className="w-4 h-4" />
+                Home
+              </Button>
+
+              {isAuth && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="gap-2 border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
         </div>

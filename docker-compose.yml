@@ -1,25 +1,27 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: smartbin_postgres
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: smartbin_mysql
     environment:
-      POSTGRES_DB: smartbin_db
-      POSTGRES_USER: smartbin_user
-      POSTGRES_PASSWORD: smartbin_pass
+      MYSQL_DATABASE: smartbin_db
+      MYSQL_USER: smartbin_user
+      MYSQL_PASSWORD: smartbin_pass
+      MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     networks:
       - smartbin_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smartbin_user -d smartbin_db"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
       interval: 10s
       timeout: 5s
       retries: 5
+    command: --default-authentication-plugin=mysql_native_password
 
   # MQTT Broker (Mosquitto)
   mosquitto:
@@ -48,13 +50,13 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_auth
     environment:
-      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
     ports:
       - "8001:8000"
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     networks:
       - smartbin_network
@@ -71,7 +73,7 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_bin_service
     environment:
-      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
       - MQTT_BROKER=mosquitto
@@ -79,7 +81,7 @@ services:
     ports:
       - "8002:8000"
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       mosquitto:
         condition: service_healthy
@@ -98,7 +100,7 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_detection
     environment:
-      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
       - MQTT_BROKER=mosquitto
@@ -107,7 +109,7 @@ services:
     ports:
       - "8003:8000"
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       mosquitto:
         condition: service_healthy
@@ -126,13 +128,13 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_reclamation
     environment:
-      - DATABASE_URL=postgresql://smartbin_user:smartbin_pass@postgres:5432/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
     ports:
       - "8004:8000"
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     networks:
       - smartbin_network
@@ -213,22 +215,22 @@ services:
       - smartbin_network
     command: sh -c "npm install -g pnpm && pnpm install && pnpm run dev"
 
-  # pgAdmin - Database Visualization Tool
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: smartbin_pgadmin
+  # phpMyAdmin - Database Visualization Tool
+  phpmyadmin:
+    image: arm64v8/phpmyadmin:latest
+    container_name: smartbin_phpmyadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@smartbin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: smartbin_user
+      PMA_PASSWORD: smartbin_pass
+      MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - "8080:80"
     networks:
       - smartbin_network
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
 
 networks:
@@ -236,8 +238,7 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  mysql_data:
   mosquitto_data:
   mosquitto_logs:
   node_red_data:
-  pgadmin_data:

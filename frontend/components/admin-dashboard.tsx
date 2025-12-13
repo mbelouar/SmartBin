@@ -8,17 +8,39 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BinCard } from "@/components/bin-card"
-import { binApi } from "@/lib/api"
+import { binApi, isAuthenticated, getUser } from "@/lib/api"
 import type { Bin } from "@/lib/types"
-import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2 } from "lucide-react"
+import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { MapPicker } from "@/components/map-picker"
 
 export function AdminDashboard() {
   const [bins, setBins] = useState<Bin[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [isAuth, setIsAuth] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = () => {
+      const authenticated = isAuthenticated()
+      const currentUser = getUser()
+      setIsAuth(authenticated)
+      setUser(currentUser)
+      
+      if (!authenticated) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as an admin user to manage bins.",
+          variant: "destructive",
+        })
+      }
+    }
+    checkAuth()
+  }, [toast])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -57,12 +79,21 @@ export function AdminDashboard() {
     setSubmitting(true)
 
     try {
+      // Round coordinates to 6 decimal places to match database constraint (max_digits=9, decimal_places=6)
+      const roundCoordinate = (value: string | undefined): number | undefined => {
+        if (!value) return undefined
+        const num = parseFloat(value)
+        if (isNaN(num)) return undefined
+        // Round to 6 decimal places
+        return Math.round(num * 1000000) / 1000000
+      }
+
       const binData = {
         name: formData.name,
         qr_code: formData.qr_code,
         location: formData.location,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+        latitude: roundCoordinate(formData.latitude),
+        longitude: roundCoordinate(formData.longitude),
         capacity: parseInt(formData.capacity),
         status: formData.status,
       }
@@ -88,11 +119,21 @@ export function AdminDashboard() {
       loadBins()
     } catch (err: any) {
       console.error("Failed to create bin:", err)
-      toast({
-        title: "Error",
-        description: err.message || "Failed to create bin. Make sure you're logged in as admin.",
-        variant: "destructive",
-      })
+      const errorMessage = err.message || "Failed to create bin"
+      
+      if (errorMessage.includes("Authentication") || errorMessage.includes("credentials")) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as an admin user to create bins. You need to be authenticated first.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -132,13 +173,63 @@ export function AdminDashboard() {
           </div>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300 shadow-lg"
+            disabled={!isAuth}
+            className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             {showForm ? "Cancel" : "Add New Bin"}
           </Button>
         </div>
       </motion.div>
+
+      {/* Authentication Warning */}
+      {!isAuth && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass border-destructive/50 bg-destructive/10 p-4 rounded-lg"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-bold text-destructive mb-1">Authentication Required</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                You need to be logged in as an admin user to create and manage bins.
+              </p>
+              <div className="bg-background/50 p-3 rounded-lg text-xs space-y-2">
+                <p className="font-semibold">To create an admin user, run:</p>
+                <code className="block bg-muted p-2 rounded font-mono">
+                  docker-compose exec auth_service python manage.py createsuperuser
+                </code>
+                <p className="text-muted-foreground mt-2">
+                  Then log in through the main application to get an authentication token.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {isAuth && user && !user.is_staff && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass border-warning/50 bg-warning/10 p-4 rounded-lg"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-warning mb-1">Admin Access Required</h3>
+              <p className="text-sm text-muted-foreground">
+                You are logged in as <strong>{user.username}</strong>, but you need admin privileges to create bins.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Contact an administrator or create a superuser account.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Add Bin Form */}
       {showForm && (
@@ -184,8 +275,28 @@ export function AdminDashboard() {
                   />
                 </div>
 
+                <div className="space-y-2 md:col-span-2">
+                  <MapPicker
+                    onLocationSelect={(lat, lng) => {
+                      setFormData({
+                        ...formData,
+                        latitude: lat.toString(),
+                        longitude: lng.toString(),
+                      })
+                    }}
+                    selectedLocation={
+                      formData.latitude && formData.longitude
+                        ? {
+                            lat: parseFloat(formData.latitude),
+                            lng: parseFloat(formData.longitude),
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="latitude">Latitude</Label>
+                  <Label htmlFor="latitude">Latitude (or use map above)</Label>
                   <Input
                     id="latitude"
                     type="number"
@@ -197,7 +308,7 @@ export function AdminDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="longitude">Longitude</Label>
+                  <Label htmlFor="longitude">Longitude (or use map above)</Label>
                   <Input
                     id="longitude"
                     type="number"
