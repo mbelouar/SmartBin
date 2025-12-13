@@ -38,25 +38,24 @@ export default function SmartBinApp() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/50 bg-gradient-to-r from-yellow-500/10 via-amber-500/5 to-yellow-500/10 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-border/50 glass sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SmartBinLogo size="sm" />
               <div>
-                <h1 className="text-2xl font-bold text-balance bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-balance bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
                   SmartBin
                 </h1>
-                <p className="text-xs text-muted-foreground">Smart Waste Management</p>
+                <p className="text-xs text-muted-foreground font-medium">Eco-Friendly Waste Management</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-yellow-400/20 via-amber-400/10 to-yellow-500/20 border border-yellow-400/30 overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
-                <span className="font-bold text-yellow-400 text-lg">{points}</span>
-                <span className="text-xs text-muted-foreground font-medium">points</span>
+              <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary/20 via-accent/10 to-secondary/20 border border-primary/30">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="font-bold text-primary text-lg tabular-nums">{points}</span>
+                <span className="text-xs text-muted-foreground font-medium">eco points</span>
               </div>
             </div>
           </div>
@@ -64,24 +63,24 @@ export default function SmartBinApp() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-2 p-1.5 bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 w-fit shadow-lg">
+        <div className="flex gap-2 p-1.5 glass rounded-2xl border border-border/50 w-fit shadow-xl hover-lift">
           <Button
             variant={view === "dashboard" ? "default" : "ghost"}
             size="sm"
             onClick={() => setView("dashboard")}
-            className="gap-2 rounded-xl transition-all duration-300"
+            className="gap-2 rounded-xl transition-all duration-300 hover:scale-105"
           >
             <LayoutGrid className="w-4 h-4" />
-            Dashboard
+            <span className="font-medium">Dashboard</span>
           </Button>
           <Button
             variant={view === "map" ? "default" : "ghost"}
             size="sm"
             onClick={() => setView("map")}
-            className="gap-2 rounded-xl transition-all duration-300"
+            className="gap-2 rounded-xl transition-all duration-300 hover:scale-105"
           >
             <Map className="w-4 h-4" />
-            Map View
+            <span className="font-medium">Map View</span>
           </Button>
         </div>
       </div>

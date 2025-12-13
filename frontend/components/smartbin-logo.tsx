@@ -1,7 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
-
 interface SmartBinLogoProps {
   size?: "sm" | "md" | "lg"
 }
@@ -13,84 +11,94 @@ export function SmartBinLogo({ size = "sm" }: SmartBinLogoProps) {
     lg: { container: "w-20 h-20" },
   }
 
-  const Container = motion.div
-  const Inner = motion.div
-
   return (
     <div className={`${sizes[size].container} relative flex items-center justify-center`}>
-      {/* Main container */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-500 opacity-90" />
-
-      {/* Inner bin shape */}
-      <div className={`${sizes[size].container} relative z-10 rounded-lg bg-background/90 backdrop-blur-sm`}>
-        {/* Smart Bin Icon */}
-        <svg
-          viewBox="0 0 80 80"
-          className="w-full h-full drop-shadow-2xl"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Main bin body */}
+      <svg
+        viewBox="0 0 100 100"
+        className="w-full h-full"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Background circle with gradient */}
+        <circle cx="50" cy="50" r="48" fill="url(#bgGradient)" />
+        
+        {/* Modern bin shape - simplified and elegant */}
+        <path
+          d="M30 35 L35 70 C35 72.5 37 75 40 75 L60 75 C63 75 65 72.5 65 70 L70 35 Z"
+          fill="url(#binGradient)"
+          stroke="url(#binStroke)"
+          strokeWidth="1.5"
+        />
+        
+        {/* Bin lid with rounded corners */}
+        <rect x="28" y="30" width="44" height="8" rx="4" fill="url(#lidGradient)" />
+        
+        {/* Smart indicator - leaf symbol */}
+        <path
+          d="M50 45 Q48 40 45 42 Q48 44 50 50 Q52 44 55 42 Q52 40 50 45"
+          fill="url(#leafGradient)"
+          stroke="#ffffff"
+          strokeWidth="0.5"
+          opacity="0.9"
+        />
+        
+        {/* Recycling arrows - modern style */}
+        <g transform="translate(50, 58) scale(0.4)">
           <path
-            d="M20 28 L24 68 C24 71 26 73 29 73 L51 73 C54 73 56 71 56 68 L60 28 Z"
-            fill="url(#binBody)"
-            stroke="#eab308"
-            strokeWidth="2"
-          />
-
-          {/* Bin lid */}
-          <rect x="16" y="22" width="48" height="6" rx="3" fill="url(#lidGradient)" />
-
-          {/* Smart display screen */}
-          <rect x="30" y="36" width="20" height="14" rx="2" fill="#1e293b" stroke="#fbbf24" strokeWidth="1.5" />
-
-          {/* Display content - checkmark */}
-          <path
-            d="M35 43 L38 46 L45 39"
-            stroke="#eab308"
-            strokeWidth="2"
+            d="M-15 -10 L0 -20 L15 -10 M-15 10 L0 20 L15 10 M-15 0 L0 -10 L15 0"
+            stroke="#ffffff"
+            strokeWidth="2.5"
+            fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
+            opacity="0.8"
           />
-
-          {/* Tech pattern - circuit lines */}
-          <path d="M28 55 L32 55 L32 60" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
-          <circle cx="32" cy="60" r="1.5" fill="#fbbf24" opacity="0.8" />
-          <path d="M52 55 L48 55 L48 60" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
-          <circle cx="48" cy="60" r="1.5" fill="#fbbf24" opacity="0.8" />
-
-          {/* Smart indicators */}
-          <circle cx="36" cy="32" r="2" fill="#22c55e" />
-          <circle cx="40" cy="32" r="2" fill="#eab308" />
-          <circle cx="44" cy="32" r="2" fill="#3b82f6" />
-
-          {/* Recycling symbol */}
-          <g transform="translate(34, 16) scale(0.08)">
-            <path
-              d="M60 50 L80 20 L100 50 Z M40 100 L60 70 L80 100 Z M100 100 L120 70 L140 100 Z"
-              stroke="#16a34a"
-              strokeWidth="8"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-
-          <defs>
-            <linearGradient id="binBody" x1="40" y1="28" x2="40" y2="73">
-              <stop offset="0%" stopColor="#334155" />
-              <stop offset="50%" stopColor="#1e293b" />
-              <stop offset="100%" stopColor="#0f172a" />
-            </linearGradient>
-
-            <linearGradient id="lidGradient" x1="16" y1="25" x2="64" y2="25">
-              <stop offset="0%" stopColor="#fbbf24" />
-              <stop offset="50%" stopColor="#eab308" />
-              <stop offset="100%" stopColor="#f59e0b" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+        </g>
+        
+        {/* Tech accent lines */}
+        <line x1="40" y1="50" x2="60" y2="50" stroke="url(#accentGradient)" strokeWidth="1" opacity="0.6" />
+        
+        <defs>
+          {/* Background gradient */}
+          <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="50%" stopColor="#16a34a" />
+            <stop offset="100%" stopColor="#84cc16" />
+          </linearGradient>
+          
+          {/* Bin gradient */}
+          <linearGradient id="binGradient" x1="50" y1="35" x2="50" y2="75">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#f0fdf4" stopOpacity="0.9" />
+          </linearGradient>
+          
+          {/* Bin stroke */}
+          <linearGradient id="binStroke" x1="30" y1="35" x2="70" y2="75">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#16a34a" />
+          </linearGradient>
+          
+          {/* Lid gradient */}
+          <linearGradient id="lidGradient" x1="28" y1="34" x2="72" y2="34">
+            <stop offset="0%" stopColor="#86efac" />
+            <stop offset="50%" stopColor="#4ade80" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+          
+          {/* Leaf gradient */}
+          <linearGradient id="leafGradient" x1="45" y1="40" x2="55" y2="50">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#16a34a" />
+          </linearGradient>
+          
+          {/* Accent gradient */}
+          <linearGradient id="accentGradient" x1="40" y1="50" x2="60" y2="50">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="0" />
+            <stop offset="50%" stopColor="#22c55e" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   )
 }

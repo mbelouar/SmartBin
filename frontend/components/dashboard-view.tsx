@@ -6,7 +6,7 @@ import { BinCard } from "@/components/bin-card"
 import { Badge } from "@/components/ui/badge"
 import type { Bin } from "@/lib/types"
 import { binApi } from "@/lib/api"
-import { Sparkles, TrendingUp, Loader2 } from "lucide-react"
+import { TrendingUp, Loader2 } from "lucide-react"
 
 interface DashboardViewProps {
   onBinSelect: (bin: Bin) => void
@@ -46,10 +46,10 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
       >
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-4xl font-bold mb-2 text-balance bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
-              Nearby Bins
+            <h2 className="text-4xl font-bold mb-2 text-balance bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+              Nearby Eco Bins
             </h2>
-            <p className="text-muted-foreground text-lg">Find and use smart bins near you</p>
+            <p className="text-muted-foreground text-lg font-medium">Find and use smart bins near you</p>
           </div>
 
           {/* Stats Badge */}
@@ -58,7 +58,7 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
           >
-            <Badge className="gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/30 text-base text-yellow-400">
+            <Badge className="gap-2 px-4 py-2 glass border-primary/30 text-base text-primary font-semibold hover-lift">
               <TrendingUp className="w-4 h-4" />
               {availableBins.length} Available
             </Badge>
@@ -70,7 +70,7 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="h-1 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 rounded-full origin-left"
+          className="h-1 bg-gradient-eco rounded-full origin-left shadow-lg"
         />
       </motion.div>
 
@@ -79,20 +79,14 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        /* Updated banner to yellow theme */
-        className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-yellow-400/10 via-amber-400/10 to-yellow-500/10 border border-yellow-400/20"
+        className="relative overflow-hidden p-6 rounded-2xl glass border border-primary/20 hover-lift"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/5 to-transparent animate-shimmer" />
-        <div className="relative flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400/30 to-amber-400/10 flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
-          </div>
-          <div>
-            <h3 className="font-bold text-lg mb-1">Earn Points & Make a Difference</h3>
-            <p className="text-sm text-muted-foreground">
-              Deposit your waste responsibly and earn 10 points for each disposal
-            </p>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-shimmer" />
+        <div className="relative">
+          <h3 className="font-bold text-lg mb-1 text-primary">Earn Eco Points & Save the Planet</h3>
+          <p className="text-sm text-muted-foreground font-medium">
+            Deposit your waste responsibly and earn 10 eco points for each smart disposal
+          </p>
         </div>
       </motion.div>
 
