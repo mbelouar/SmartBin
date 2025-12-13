@@ -13,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - smartbin_network
     healthcheck:
@@ -188,14 +187,23 @@ services:
       mosquitto:
         condition: service_healthy
 
-  # Frontend (Web UI)
+  # Frontend (Next.js Web UI)
   frontend:
-    image: nginx:alpine
+    image: node:20-alpine
     container_name: smartbin_frontend
+    working_dir: /app
+    environment:
+      - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
+      - NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
+      - NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
+      - NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
+      - NODE_ENV=development
     ports:
-      - "3000:80"
+      - "3000:3000"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - auth_service
       - bin_service
@@ -203,6 +211,7 @@ services:
       - reclamation_service
     networks:
       - smartbin_network
+    command: sh -c "npm install -g pnpm && pnpm install && pnpm run dev"
 
   # pgAdmin - Database Visualization Tool
   pgadmin:

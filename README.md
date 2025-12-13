@@ -203,7 +203,7 @@ docker-compose down -v
 - **IoT Simulation**: Node-RED
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT (djangorestframework-simplejwt)
-- **Frontend**: HTML/CSS/JavaScript (simple) or React
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
 
 ## 🧪 Testing
 

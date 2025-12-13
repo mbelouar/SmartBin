@@ -63,6 +63,15 @@ node-red/data/node_modules/
 node-red/data/.config.json
 node-red/data/.sessions.json
 
+# Next.js Frontend
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.pnpm-store/
+frontend/node_modules/
+frontend/.env*.local
+frontend/next-env.d.ts
+
 # Logs
 logs/
 *.log
