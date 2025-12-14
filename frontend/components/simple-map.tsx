@@ -251,9 +251,28 @@ export function SimpleMap({
     }
   }
 
+  const [mapReady, setMapReady] = useState(false)
+
   useEffect(() => {
-    setMapLoaded(true)
+    // Small delay to ensure map container is ready
+    const timer = setTimeout(() => {
+      setMapLoaded(true)
+      // Additional delay for map to fully initialize
+      setTimeout(() => {
+        setMapReady(true)
+      }, 100)
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
+
+  // Auto-expand card when bin is selected from map
+  useEffect(() => {
+    if (selectedBinId) {
+      setActiveInfoCard(selectedBinId)
+    } else {
+      setActiveInfoCard(null)
+    }
+  }, [selectedBinId])
 
   // Get tile layer URL based on selected map layer
   const getTileLayerUrl = () => {
@@ -292,16 +311,19 @@ export function SimpleMap({
                 zoom={binsWithCoords.length === 1 ? 15 : 13}
                 style={{ height: "100%", width: "100%", zIndex: 0 }}
                 scrollWheelZoom={true}
+                whenReady={() => setMapReady(true)}
               >
-                <TileLayer
-                  key={mapLayer} // Force re-render when layer changes
-                  attribution={getTileLayerAttribution()}
-                  url={getTileLayerUrl()}
-                />
-                <FitBounds bins={binsWithCoords} />
-                
-                {/* Bin Markers */}
-                {binsWithCoords.map((bin) => {
+                {mapReady && (
+                  <>
+                    <TileLayer
+                      key={mapLayer} // Force re-render when layer changes
+                      attribution={getTileLayerAttribution()}
+                      url={getTileLayerUrl()}
+                    />
+                    <FitBounds bins={binsWithCoords} />
+                    
+                    {/* Bin Markers */}
+                    {binsWithCoords.map((bin) => {
                   const lat = parseCoord(bin.latitude)
                   const lng = parseCoord(bin.longitude)
                   const isSelected = selectedBinId === bin.id
@@ -341,21 +363,23 @@ export function SimpleMap({
                   )
                 })}
 
-                {/* User Location Marker */}
-                {userLocation && (
-                  <Marker
-                    position={[userLocation.lat, userLocation.lng]}
-                    icon={createUserIcon()}
-                  >
-                    <Popup>
-                      <div className="p-2">
-                        <p className="text-sm font-semibold">Your Location</p>
-                        <p className="text-xs text-muted-foreground">
-                          {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
+                    {/* User Location Marker */}
+                    {userLocation && (
+                      <Marker
+                        position={[userLocation.lat, userLocation.lng]}
+                        icon={createUserIcon()}
+                      >
+                        <Popup>
+                          <div className="p-2">
+                            <p className="text-sm font-semibold">Your Location</p>
+                            <p className="text-xs text-muted-foreground">
+                              {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                  </>
                 )}
               </MapContainer>
             ) : (
@@ -448,13 +472,64 @@ export function SimpleMap({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-12"
+                    className="h-full flex flex-col"
                   >
-                    <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <p className="text-sm text-muted-foreground mb-2">No bin selected</p>
-                    <p className="text-xs text-muted-foreground">
-                      Click on any bin marker on the map to view its details
-                    </p>
+                    {/* Placeholder Card - Same structure as bin card */}
+                    <Card className="overflow-hidden border-2 border-dashed border-border/30 hover:border-primary/30 transition-all duration-300 h-full flex flex-col">
+                      {/* Card Header with Gradient Placeholder */}
+                      <div className="relative h-2 bg-gradient-to-r from-muted via-muted/80 to-muted overflow-hidden">
+                        <motion.div
+                          className="absolute inset-0 bg-white/10"
+                          initial={{ x: "-100%" }}
+                          animate={{ x: "100%" }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        />
+                      </div>
+
+                      {/* Card Content */}
+                      <div className="p-3 bg-card flex-1 flex flex-col justify-center">
+                        <div className="flex items-start gap-3 mb-4">
+                          {/* Icon Placeholder */}
+                          <div className="shrink-0 rounded-full p-2 border-2 border-muted bg-muted/50">
+                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                          </div>
+
+                          {/* Info Placeholder */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                              <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                            </div>
+                            
+                            <div className="h-3 w-32 bg-muted rounded animate-pulse mb-2" />
+
+                            {/* Fill Level Bar Placeholder */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                                <div className="h-3 w-8 bg-muted rounded animate-pulse" />
+                              </div>
+                              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full w-0 bg-muted" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Empty State Message */}
+                        <div className="text-center py-8 border-t border-border/50 mt-4">
+                          <MapPin className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                          <p className="text-sm text-muted-foreground mb-1 font-medium">No bin selected</p>
+                          <p className="text-xs text-muted-foreground">
+                            Click on any bin marker on the map to view its details
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
                   </motion.div>
                 ) : (
                   binsWithCoords.filter(bin => bin.id === selectedBinId).map((bin, index) => {
