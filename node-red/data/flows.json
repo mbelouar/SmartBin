@@ -105,7 +105,19 @@
         ],
         "x": 730,
         "y": 180,
-        "wires": [["debug_nfc"]]
+        "wires": [["function_store_opened", "debug_nfc"]]
+    },
+    {
+        "id": "function_store_opened",
+        "type": "function",
+        "z": "tab_main",
+        "name": "Store Opened Bin",
+        "func": "// Store opened bin info for trash detection\nconst selectedBin = flow.get('selectedBin');\nif (selectedBin && msg.statusCode === 200) {\n    flow.set('lastOpenedBin', {\n        bin_id: selectedBin.bin_id,\n        user_qr_code: 'SB-user-001',\n        opened_at: new Date().toISOString()\n    });\n    node.status({fill:'green', shape:'dot', text:'✓ Bin opened & stored'});\n}\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 960,
+        "y": 160,
+        "wires": [[]]
     },
     {
         "id": "debug_nfc",
