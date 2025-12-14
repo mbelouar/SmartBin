@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,32 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
   const [isDetecting, setIsDetecting] = useState(false)
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null)
   const [showPointsAnimation, setShowPointsAnimation] = useState(false)
+
+  // Check if bin can be opened (memoized to prevent re-renders)
+  const { canOpen, statusMessage } = useMemo(() => {
+    if (bin.status === "full" || bin.fill_level >= 90) {
+      return {
+        canOpen: false,
+        statusMessage: "This bin is full and cannot accept more waste. Please use another bin."
+      }
+    }
+    if (bin.status === "maintenance") {
+      return {
+        canOpen: false,
+        statusMessage: "This bin is currently under maintenance and temporarily unavailable. Please use another bin."
+      }
+    }
+    if (bin.status === "inactive") {
+      return {
+        canOpen: false,
+        statusMessage: "This bin is currently inactive and cannot be used. Please use another bin."
+      }
+    }
+    return {
+      canOpen: true,
+      statusMessage: null
+    }
+  }, [bin.status, bin.fill_level])
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -55,6 +81,11 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
   }, [isOpen, isDetecting])
 
   const handleOpen = async () => {
+    // Check if bin can be opened
+    if (!canOpen) {
+      return
+    }
+
     console.log("[v0] Opening bin via Node-RED:", bin.id)
     try {
       setIsOpen(true)
@@ -356,6 +387,60 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                 )}
               </AnimatePresence>
 
+              {/* Status Message */}
+              <AnimatePresence>
+                {statusMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    className={`p-4 rounded-lg border-2 ${
+                      bin.status === "full" || bin.fill_level >= 90
+                        ? "bg-red-500/10 border-red-500/40"
+                        : bin.status === "maintenance"
+                        ? "bg-orange-500/10 border-orange-500/40"
+                        : "bg-gray-500/10 border-gray-500/40"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 ${
+                        bin.status === "full" || bin.fill_level >= 90
+                          ? "text-red-500"
+                          : bin.status === "maintenance"
+                          ? "text-orange-500"
+                          : "text-gray-500"
+                      }`}>
+                        {bin.status === "full" || bin.fill_level >= 90 ? (
+                          <X className="w-5 h-5" />
+                        ) : bin.status === "maintenance" ? (
+                          <Clock className="w-5 h-5" />
+                        ) : (
+                          <Lock className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-semibold mb-1 ${
+                          bin.status === "full" || bin.fill_level >= 90
+                            ? "text-red-500"
+                            : bin.status === "maintenance"
+                            ? "text-orange-500"
+                            : "text-gray-500"
+                        }`}>
+                          {bin.status === "full" || bin.fill_level >= 90
+                            ? "Bin is Full"
+                            : bin.status === "maintenance"
+                            ? "Under Maintenance"
+                            : "Bin is Inactive"}
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {statusMessage}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Control Buttons */}
               <div className="space-y-3">
                 <AnimatePresence mode="wait">
@@ -368,7 +453,8 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     >
                       <Button
                         onClick={handleOpen}
-                        className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-primary via-accent to-secondary hover:from-primary/90 hover:via-accent/90 hover:to-secondary/90 text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group"
+                        disabled={!canOpen}
+                        className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-primary via-accent to-secondary hover:from-primary/90 hover:via-accent/90 hover:to-secondary/90 text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         size="lg"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
@@ -399,38 +485,40 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
               </div>
 
               {/* Info Message */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="flex items-start gap-2.5 p-3 rounded-lg bg-gradient-to-br from-blue-500/10 via-blue-400/5 to-blue-500/10 border border-blue-500/20"
-              >
-                <div className="mt-0.5">
-                  {isOpen ? (
-                    isDetecting ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+              {!statusMessage && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-start gap-2.5 p-3 rounded-lg bg-gradient-to-br from-blue-500/10 via-blue-400/5 to-blue-500/10 border border-blue-500/20"
+                >
+                  <div className="mt-0.5">
+                    {isOpen ? (
+                      isDetecting ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-blue-500" />
+                      )
                     ) : (
-                      <Clock className="w-4 h-4 text-blue-500" />
-                    )
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-foreground mb-0.5">
-                    {isOpen 
-                      ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for detection")
-                      : "Ready to use"}
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {isOpen
-                      ? (isDetecting 
-                          ? "The IoT sensor detected your deposit. Points will be awarded automatically!"
-                          : "Place your waste in the bin. The IoT sensor will automatically detect it and award points.")
-                      : "Click 'Open Bin' to unlock. The bin will automatically detect when you deposit waste and award eco points!"}
-                  </p>
-                </div>
-              </motion.div>
+                      <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-foreground mb-0.5">
+                      {isOpen 
+                        ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for detection")
+                        : "Ready to use"}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {isOpen
+                        ? (isDetecting 
+                            ? "The IoT sensor detected your deposit. Points will be awarded automatically!"
+                            : "Place your waste in the bin. The IoT sensor will automatically detect it and award points.")
+                        : "Click 'Open Bin' to unlock. The bin will automatically detect when you deposit waste and award eco points!"}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
