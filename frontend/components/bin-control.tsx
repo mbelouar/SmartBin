@@ -150,19 +150,23 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
 
   const handleTrashDetected = (points: number = 10) => {
     setIsDetecting(true)
-    setPointsAwarded(points)
-    setShowPointsAnimation(true)
     
-    // Award points
-    onTrashDeposited()
-    
-    // Close bin after animation
+    // Wait 2 seconds before showing points animation
     setTimeout(() => {
-      handleClose()
+      setPointsAwarded(points)
+      setShowPointsAnimation(true)
+      
+      // Award points
+      onTrashDeposited()
+      
+      // Close bin after animation
       setTimeout(() => {
-        onClose()
-      }, 500)
-    }, 2500)
+        handleClose()
+        setTimeout(() => {
+          onClose()
+        }, 500)
+      }, 2500)
+    }, 2000) // 2 second delay
   }
 
   const getStatusColor = () => {
