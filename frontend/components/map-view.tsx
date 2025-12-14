@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Bin } from "@/lib/types"
 import { binApi } from "@/lib/api"
 import { SimpleMap } from "@/components/simple-map"
@@ -31,10 +32,13 @@ const mapLayers: { id: MapLayer; name: string; icon: React.ReactNode }[] = [
 
 export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
+  const [filteredBins, setFilteredBins] = useState<Bin[]>([])
   const [selectedBinId, setSelectedBinId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>(undefined)
   const [mapLayer, setMapLayer] = useState<MapLayer>("osm")
+  const [selectedCity, setSelectedCity] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
 
   useEffect(() => {
     async function loadBins() {
@@ -50,6 +54,26 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
     }
     loadBins()
   }, [])
+
+  // Filter bins based on city and status
+  useEffect(() => {
+    let filtered = bins
+
+    // Filter by city
+    if (selectedCity !== "all") {
+      filtered = filtered.filter(bin => bin.city === selectedCity)
+    }
+
+    // Filter by status
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter(bin => bin.status === selectedStatus)
+    }
+
+    setFilteredBins(filtered)
+  }, [bins, selectedCity, selectedStatus])
+
+  // Get unique cities from bins
+  const cities = Array.from(new Set(bins.map(bin => bin.city).filter(Boolean)))
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
@@ -77,7 +101,7 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
     onBinSelect(bin)
   }
 
-  const availableBins = bins.filter((bin) => bin.status === "active" && bin.fill_level < 80)
+  const availableBins = filteredBins.filter((bin) => bin.status === "active" && bin.fill_level < 80)
 
   return (
     <div className="space-y-6 flex flex-col h-full min-h-0">
@@ -91,7 +115,35 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
             <p className="text-muted-foreground text-lg font-medium">Interactive bin locations near you</p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {/* Filters */}
+            <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <SelectTrigger className="w-[160px] glass border-primary/30">
+                <SelectValue placeholder="Filter by city" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[160px] glass border-primary/30">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+              </SelectContent>
+            </Select>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2 glass border-primary/30 hover:bg-primary/10 hover-lift">
@@ -145,7 +197,8 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
       >
         <Badge className="gap-2 px-4 py-2 glass border-primary/30 text-sm text-primary font-semibold hover-lift">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          {bins.length} Total Bins
+          {filteredBins.length} Total Bins
+          {filteredBins.length !== bins.length && ` (${bins.length} total)`}
         </Badge>
         <Badge className="gap-2 px-4 py-2 glass border-secondary/30 text-sm text-secondary font-semibold hover-lift">
           <div className="w-2 h-2 rounded-full bg-secondary" />
@@ -171,7 +224,7 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
           </Card>
         ) : (
           <SimpleMap
-            bins={bins}
+            bins={filteredBins}
             selectedBinId={selectedBinId}
             onBinClick={handleBinClick}
             onUseBin={handleUseBin}

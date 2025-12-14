@@ -4,9 +4,12 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { BinCard } from "@/components/bin-card"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import type { Bin } from "@/lib/types"
 import { binApi } from "@/lib/api"
-import { TrendingUp, Loader2 } from "lucide-react"
+import { TrendingUp, Loader2, AlertCircle } from "lucide-react"
 
 interface DashboardViewProps {
   onBinSelect: (bin: Bin) => void
@@ -14,8 +17,11 @@ interface DashboardViewProps {
 
 export function DashboardView({ onBinSelect }: DashboardViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
+  const [filteredBins, setFilteredBins] = useState<Bin[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCity, setSelectedCity] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
 
   useEffect(() => {
     async function loadBins() {
@@ -33,7 +39,27 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
     loadBins()
   }, [])
 
-  const availableBins = bins.filter((bin) => bin.status === "active" && bin.fill_level < 80)
+  // Filter bins based on city and status
+  useEffect(() => {
+    let filtered = bins
+
+    // Filter by city
+    if (selectedCity !== "all") {
+      filtered = filtered.filter(bin => bin.city === selectedCity)
+    }
+
+    // Filter by status
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter(bin => bin.status === selectedStatus)
+    }
+
+    setFilteredBins(filtered)
+  }, [bins, selectedCity, selectedStatus])
+
+  // Get unique cities from bins
+  const cities = Array.from(new Set(bins.map(bin => bin.city).filter(Boolean)))
+
+  const availableBins = filteredBins.filter((bin) => bin.status === "active" && bin.fill_level < 80)
 
   return (
     <div className="space-y-8">
@@ -44,7 +70,7 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
         transition={{ duration: 0.5 }}
         className="space-y-4"
       >
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
             <h2 className="text-4xl font-bold mb-2 text-balance bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
               Nearby Eco Bins
@@ -52,17 +78,48 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
             <p className="text-muted-foreground text-lg font-medium">Find and use smart bins near you</p>
           </div>
 
-          {/* Stats Badge */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-          >
-            <Badge className="gap-2 px-4 py-2 glass border-primary/30 text-base text-primary font-semibold hover-lift">
-              <TrendingUp className="w-4 h-4" />
-              {availableBins.length} Available
-            </Badge>
-          </motion.div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Filters */}
+            <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <SelectTrigger className="w-[160px] glass border-primary/30">
+                <SelectValue placeholder="Filter by city" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[160px] glass border-primary/30">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Stats Badge */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+            >
+              <Badge className="gap-2 px-4 py-2 glass border-primary/30 text-base text-primary font-semibold hover-lift">
+                <TrendingUp className="w-4 h-4" />
+                {availableBins.length} Available
+                {filteredBins.length !== bins.length && ` (${filteredBins.length} total)`}
+              </Badge>
+            </motion.div>
+          </div>
         </div>
 
         {/* Decorative Line */}
@@ -103,9 +160,24 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
         <div className="text-center py-20">
           <p className="text-muted-foreground">No bins found. Please add bins via the admin panel.</p>
         </div>
+      ) : filteredBins.length === 0 ? (
+        <Card className="p-12 text-center glass">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground text-lg mb-4">No bins match the selected filters.</p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedCity("all")
+              setSelectedStatus("all")
+            }}
+            className="gap-2"
+          >
+            Clear Filters
+          </Button>
+        </Card>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {bins.map((bin, index) => (
+        {filteredBins.map((bin, index) => (
           <motion.div
             key={bin.id}
             initial={{ opacity: 0, y: 30 }}
