@@ -18,6 +18,8 @@ const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { 
 // Import Leaflet CSS - Next.js handles this correctly for SSR
 import "leaflet/dist/leaflet.css"
 
+type MapLayer = "osm" | "satellite" | "terrain"
+
 interface SimpleMapProps {
   bins: Bin[]
   selectedBinId: string | null
@@ -25,6 +27,7 @@ interface SimpleMapProps {
   onUseBin?: (bin: Bin) => void
   userLocation?: { lat: number; lng: number }
   isModalOpen?: boolean
+  mapLayer?: MapLayer
 }
 
 // Helper to parse coordinate (handles both string and number)
@@ -172,6 +175,7 @@ export function SimpleMap({
   onUseBin,
   userLocation,
   isModalOpen = false,
+  mapLayer = "osm",
 }: SimpleMapProps) {
   const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -251,6 +255,31 @@ export function SimpleMap({
     setMapLoaded(true)
   }, [])
 
+  // Get tile layer URL based on selected map layer
+  const getTileLayerUrl = () => {
+    switch (mapLayer) {
+      case "satellite":
+        return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      case "terrain":
+        return "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+      case "osm":
+      default:
+        return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  }
+
+  const getTileLayerAttribution = () => {
+    switch (mapLayer) {
+      case "satellite":
+        return '&copy; <a href="https://www.esri.com/">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      case "terrain":
+        return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+      case "osm":
+      default:
+        return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
       {/* Map Container - Takes 2 columns on large screens */}
@@ -265,8 +294,9 @@ export function SimpleMap({
                 scrollWheelZoom={true}
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  key={mapLayer} // Force re-render when layer changes
+                  attribution={getTileLayerAttribution()}
+                  url={getTileLayerUrl()}
                 />
                 <FitBounds bins={binsWithCoords} />
                 

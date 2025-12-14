@@ -8,18 +8,33 @@ import { Badge } from "@/components/ui/badge"
 import type { Bin } from "@/lib/types"
 import { binApi } from "@/lib/api"
 import { SimpleMap } from "@/components/simple-map"
-import { Locate, Layers, Loader2 } from "lucide-react"
+import { Locate, Layers, Loader2, Map, Satellite, Mountain } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface MapViewProps {
   onBinSelect: (bin: Bin) => void
   selectedBin?: Bin | null
 }
 
+type MapLayer = "osm" | "satellite" | "terrain"
+
+const mapLayers: { id: MapLayer; name: string; icon: React.ReactNode }[] = [
+  { id: "osm", name: "Street Map", icon: <Map className="w-4 h-4" /> },
+  { id: "satellite", name: "Satellite", icon: <Satellite className="w-4 h-4" /> },
+  { id: "terrain", name: "Terrain", icon: <Mountain className="w-4 h-4" /> },
+]
+
 export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
   const [selectedBinId, setSelectedBinId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>(undefined)
+  const [mapLayer, setMapLayer] = useState<MapLayer>("osm")
 
   useEffect(() => {
     async function loadBins() {
@@ -77,10 +92,31 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" className="gap-2 glass border-primary/30 hover:bg-primary/10 hover-lift">
-              <Layers className="w-4 h-4" />
-              <span className="font-medium">Layers</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 glass border-primary/30 hover:bg-primary/10 hover-lift">
+                  <Layers className="w-4 h-4" />
+                  <span className="font-medium">Layers</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass border-primary/30">
+                {mapLayers.map((layer) => (
+                  <DropdownMenuItem
+                    key={layer.id}
+                    onClick={() => setMapLayer(layer.id)}
+                    className={`gap-2 cursor-pointer ${
+                      mapLayer === layer.id ? "bg-primary/20 font-semibold" : ""
+                    }`}
+                  >
+                    {layer.icon}
+                    <span>{layer.name}</span>
+                    {mapLayer === layer.id && (
+                      <span className="ml-auto text-primary">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               onClick={handleGetLocation}
               className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300 shadow-lg"
@@ -141,6 +177,7 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
             onUseBin={handleUseBin}
             userLocation={userLocation}
             isModalOpen={!!selectedBin}
+            mapLayer={mapLayer}
           />
         )}
       </motion.div>
