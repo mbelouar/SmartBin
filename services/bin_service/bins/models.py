@@ -19,6 +19,7 @@ class Bin(models.Model):
     name = models.CharField(max_length=100)
     qr_code = models.CharField(max_length=100, unique=True, help_text="Auto-generated unique bin ID", blank=True)
     nfc_tag_id = models.CharField(max_length=100, unique=True, help_text="Auto-generated NFC tag ID", blank=True)
+    city = models.CharField(max_length=100, blank=True, help_text="City where the bin is located")
     location = models.CharField(max_length=255)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)

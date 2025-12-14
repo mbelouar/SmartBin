@@ -8,7 +8,7 @@ class BinSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bin
         fields = [
-            'id', 'name', 'qr_code', 'nfc_tag_id', 'location', 'latitude', 'longitude',
+            'id', 'name', 'qr_code', 'nfc_tag_id', 'city', 'location', 'latitude', 'longitude',
             'capacity', 'fill_level', 'status', 'is_open',
             'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at'
         ]

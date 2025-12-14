@@ -16,6 +16,7 @@ import { MapPicker } from "@/components/map-picker"
 
 export function AdminDashboard() {
   const [bins, setBins] = useState<Bin[]>([])
+  const [filteredBins, setFilteredBins] = useState<Bin[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -23,6 +24,8 @@ export function AdminDashboard() {
   const [user, setUser] = useState<any>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; bin: Bin | null }>({ show: false, bin: null })
   const [deleting, setDeleting] = useState(false)
+  const [selectedCity, setSelectedCity] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const { toast } = useToast()
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function AdminDashboard() {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
+    city: "",
     location: "",
     latitude: "",
     longitude: "",
@@ -57,6 +61,26 @@ export function AdminDashboard() {
   useEffect(() => {
     loadBins()
   }, [])
+
+  // Filter bins based on city and status
+  useEffect(() => {
+    let filtered = bins
+
+    // Filter by city
+    if (selectedCity !== "all") {
+      filtered = filtered.filter(bin => bin.city === selectedCity)
+    }
+
+    // Filter by status
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter(bin => bin.status === selectedStatus)
+    }
+
+    setFilteredBins(filtered)
+  }, [bins, selectedCity, selectedStatus])
+
+  // Get unique cities from bins
+  const cities = Array.from(new Set(bins.map(bin => bin.city).filter(Boolean)))
 
   const loadBins = async () => {
     try {
@@ -91,6 +115,7 @@ export function AdminDashboard() {
 
       const binData = {
         name: formData.name,
+        city: formData.city,
         location: formData.location,
         latitude: roundCoordinate(formData.latitude),
         longitude: roundCoordinate(formData.longitude),
@@ -108,6 +133,7 @@ export function AdminDashboard() {
       // Reset form
       setFormData({
         name: "",
+        city: "",
         location: "",
         latitude: "",
         longitude: "",
@@ -260,6 +286,17 @@ export function AdminDashboard() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="city">City *</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="e.g., Casablanca"
+                    required
+                  />
+                </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="location">Location *</Label>
                   <Input
@@ -381,8 +418,42 @@ export function AdminDashboard() {
 
       {/* Bins List */}
       <div>
-        <h3 className="text-2xl font-bold mb-4 text-foreground">All Bins ({bins.length})</h3>
-        
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-2xl font-bold text-foreground">
+            All Bins ({filteredBins.length}{bins.length !== filteredBins.length ? ` of ${bins.length}` : ""})
+          </h3>
+          
+          {/* Filters */}
+          <div className="flex gap-3">
+            <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by city" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -392,9 +463,24 @@ export function AdminDashboard() {
             <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground text-lg">No bins found. Create your first bin!</p>
           </Card>
+        ) : filteredBins.length === 0 ? (
+          <Card className="p-12 text-center glass">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground text-lg">No bins match the selected filters.</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                setSelectedCity("all")
+                setSelectedStatus("all")
+              }}
+            >
+              Clear Filters
+            </Button>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bins.map((bin) => (
+            {filteredBins.map((bin) => (
               <div key={bin.id} className="relative group">
                 <BinCard bin={bin} onSelect={() => {}} />
                 <Button
