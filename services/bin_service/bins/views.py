@@ -76,7 +76,7 @@ class BinViewSet(viewsets.ModelViewSet):
         return queryset
     
     @action(detail=True, methods=['post'], url_path='open')
-    def open_bin(self, request, pk=None):
+    def open_bin(self, request, id=None):
         """
         Open a specific bin
         POST /api/bins/{id}/open/
@@ -125,7 +125,7 @@ class BinViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['post'], url_path='close')
-    def close_bin(self, request, pk=None):
+    def close_bin(self, request, id=None):
         """
         Close a specific bin
         POST /api/bins/{id}/close/

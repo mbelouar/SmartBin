@@ -8,6 +8,8 @@ import json
 import logging
 from django.conf import settings
 
+# Configure logger
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -112,3 +114,10 @@ class BinMQTTClient:
 
 # Global MQTT client instance
 mqtt_client = BinMQTTClient()
+
+# Auto-connect on import (will connect when Django starts)
+try:
+    mqtt_client.connect()
+    logger.info("MQTT client initialized and connecting...")
+except Exception as e:
+    logger.warning(f"MQTT client initialization failed (will retry on first publish): {e}")

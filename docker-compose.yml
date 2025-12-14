@@ -117,9 +117,7 @@ services:
       - smartbin_network
     volumes:
       - ./services/detection_service:/app
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    command: sh /app/start.sh
 
   # Reclamation Service
   reclamation_service:

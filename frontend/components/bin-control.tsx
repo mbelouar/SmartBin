@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { X, Trash2, Lock, Unlock, MapPin, Clock, Sparkles, CheckCircle2 } from "lucide-react"
 import type { Bin } from "@/lib/types"
+import { binApi, detectionApi, getUser } from "@/lib/api"
 
 interface BinControlProps {
   bin: Bin
@@ -48,15 +49,15 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     }
   }, [bin.status, bin.fill_level])
 
+  // Countdown timer (informational only - won't auto-close)
   useEffect(() => {
     let timer: NodeJS.Timeout
 
-    if (isOpen && !isDetecting) {
+    if (isOpen && !isDetecting && !showPointsAnimation) {
       timer = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            handleClose()
-            return 10
+            return 0 // Stop at 0, don't auto-close
           }
           return prev - 1
         })
@@ -64,21 +65,38 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     }
 
     return () => clearInterval(timer)
-  }, [isOpen, isDetecting])
+  }, [isOpen, isDetecting, showPointsAnimation])
 
-  // Simulate IoT detection after bin is opened (3-8 seconds)
+  // Poll for detection events from Node-RED (real-time detection)
   useEffect(() => {
-    if (isOpen && !isDetecting) {
-      // Random detection time between 3-8 seconds
-      const detectionTime = Math.random() * 5000 + 3000
+    if (isOpen && !isDetecting && !showPointsAnimation) {
+      // Record when bin was opened to check for detections after this time
+      const openedAt = Date.now()
       
-      const detectionTimer = setTimeout(() => {
-        handleTrashDetected()
-      }, detectionTime)
+      const pollInterval = setInterval(async () => {
+        try {
+          // Get recent detections (only those created after bin was opened)
+          const detections = await detectionApi.list()
+          const recentDetection = detections.results?.find(
+            (d: any) => {
+              const detectionTime = new Date(d.created_at || d.detected_at).getTime()
+              return d.bin_id === bin.id && detectionTime >= openedAt
+            }
+          )
+          
+          if (recentDetection) {
+            clearInterval(pollInterval)
+            handleTrashDetected(recentDetection.points_awarded || 10)
+          }
+        } catch (error) {
+          console.error("Error polling for detection:", error)
+          // Continue polling - don't stop on error
+        }
+      }, 500) // Poll every 500ms for real-time detection from Node-RED
 
-      return () => clearTimeout(detectionTimer)
+      return () => clearInterval(pollInterval)
     }
-  }, [isOpen, isDetecting])
+  }, [isOpen, isDetecting, showPointsAnimation, bin.id])
 
   const handleOpen = async () => {
     // Check if bin can be opened
@@ -86,8 +104,15 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
       return
     }
 
-    console.log("[v0] Opening bin via Node-RED:", bin.id)
+    console.log("[v0] Opening bin:", bin.id)
     try {
+      // Get user QR code or use default
+      const user = getUser()
+      const userQrCode = user?.qr_code || `SB-${user?.id || 'user-001'}`
+      
+      // Call API to open bin (this will publish to MQTT)
+      await binApi.openBin(bin.id, userQrCode)
+      
       setIsOpen(true)
       setTimeRemaining(10)
       setIsDetecting(false)
@@ -95,12 +120,18 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
       setShowPointsAnimation(false)
     } catch (error) {
       console.error("[v0] Error opening bin:", error)
+      // Still show as open for testing
+      setIsOpen(true)
+      setTimeRemaining(10)
     }
   }
 
   const handleClose = async () => {
-    console.log("[v0] Closing bin via Node-RED:", bin.id)
+    console.log("[v0] Closing bin:", bin.id)
     try {
+      // Call API to close bin
+      await binApi.closeBin(bin.id)
+      
       setIsOpen(false)
       setTimeRemaining(10)
       setIsDetecting(false)
@@ -108,12 +139,17 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
       setShowPointsAnimation(false)
     } catch (error) {
       console.error("[v0] Error closing bin:", error)
+      // Still close UI
+      setIsOpen(false)
+      setTimeRemaining(10)
+      setIsDetecting(false)
+      setPointsAwarded(null)
+      setShowPointsAnimation(false)
     }
   }
 
-  const handleTrashDetected = () => {
+  const handleTrashDetected = (points: number = 10) => {
     setIsDetecting(true)
-    const points = 10
     setPointsAwarded(points)
     setShowPointsAnimation(true)
     
@@ -260,20 +296,15 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          className="relative z-10"
                         >
                           <Clock className="w-6 h-6 text-blue-500 relative z-10" />
                         </motion.div>
                         <div className="text-center relative z-10">
-                          <p className="text-xs text-muted-foreground font-medium mb-0.5">Waiting for detection</p>
-                          <motion.p
-                            key={timeRemaining}
-                            initial={{ scale: 1.2 }}
-                            animate={{ scale: 1 }}
-                            transition={{ duration: 0.3 }}
-                            className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent"
-                          >
-                            {timeRemaining}s
-                          </motion.p>
+                          <p className="text-xs text-muted-foreground font-medium mb-0.5">Waiting for Node-RED detection</p>
+                          <p className="text-sm font-semibold text-blue-400">
+                            Trigger detection from Node-RED
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -506,14 +537,14 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                   <div className="flex-1">
                     <p className="text-xs font-medium text-foreground mb-0.5">
                       {isOpen 
-                        ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for detection")
+                        ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for Node-RED detection")
                         : "Ready to use"}
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {isOpen
                         ? (isDetecting 
-                            ? "The IoT sensor detected your deposit. Points will be awarded automatically!"
-                            : "Place your waste in the bin. The IoT sensor will automatically detect it and award points.")
+                            ? "Node-RED detected your deposit. Points will be awarded automatically!"
+                            : "Bin is open. Trigger detection from Node-RED to simulate trash deposit and award points.")
                         : "Click 'Open Bin' to unlock. The bin will automatically detect when you deposit waste and award eco points!"}
                     </p>
                   </div>

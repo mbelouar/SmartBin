@@ -1,0 +1,93 @@
+[
+    {
+        "id": "mqtt_broker",
+        "type": "mqtt-broker",
+        "name": "SmartBin MQTT",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true
+    },
+    {
+        "id": "tab_main",
+        "type": "tab",
+        "label": "SmartBin Trash Detection",
+        "disabled": false,
+        "info": "IoT simulation for trash detection"
+    },
+    {
+        "id": "inject_detect_trash",
+        "type": "inject",
+        "z": "tab_main",
+        "name": "Simulate: User Puts Trash",
+        "props": [{"p": "payload"}],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 160,
+        "y": 100,
+        "wires": [["function_detect_trash"]]
+    },
+    {
+        "id": "function_detect_trash",
+        "type": "function",
+        "z": "tab_main",
+        "name": "Create Detection",
+        "func": "const lastBin = flow.get('lastOpenedBin') || {};\nconst bin_id = lastBin.bin_id || 'b3602a54-17b8-476d-b5ed-518245362690';\nconst user_qr = lastBin.user_qr_code || 'SB-user-001';\nconst materials = ['plastic', 'paper', 'glass', 'metal', 'organic', 'other'];\nconst material = materials[Math.floor(Math.random() * materials.length)];\nconst confidence = (Math.random() * 0.14 + 0.85).toFixed(2);\nmsg.topic = `bin/${bin_id}/detected`;\nmsg.payload = {bin_id: bin_id, user_qr_code: user_qr, material: material, material_type: material, confidence: parseFloat(confidence), timestamp: new Date().toISOString(), event: 'material_detected'};\nnode.status({fill:'green',shape:'dot',text:`Trash detected`});\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 400,
+        "y": 100,
+        "wires": [["mqtt_publish_detect"]]
+    },
+    {
+        "id": "mqtt_publish_detect",
+        "type": "mqtt out",
+        "z": "tab_main",
+        "name": "Publish Detection",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "broker": "mqtt_broker",
+        "x": 640,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "mqtt_subscribe_open",
+        "type": "mqtt in",
+        "z": "tab_main",
+        "name": "Listen: Bin Opens",
+        "topic": "bin/+/open",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "mqtt_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 200,
+        "wires": [["function_store_bin"]]
+    },
+    {
+        "id": "function_store_bin",
+        "type": "function",
+        "z": "tab_main",
+        "name": "Store Bin Info",
+        "func": "const bin_id = msg.payload.bin_id || msg.topic.split('/')[1];\nconst user_qr = msg.payload.user_qr_code || 'SB-user-001';\nflow.set('lastOpenedBin', {bin_id: bin_id, user_qr_code: user_qr, opened_at: new Date().toISOString()});\nnode.status({fill:'blue',shape:'dot',text:`Bin opened - waiting`});\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 380,
+        "y": 200,
+        "wires": [[]]
+    }
+]

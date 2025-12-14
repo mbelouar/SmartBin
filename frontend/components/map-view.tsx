@@ -95,9 +95,9 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2 glass border-primary/30 hover:bg-primary/10 hover-lift">
-                  <Layers className="w-4 h-4" />
+              <Layers className="w-4 h-4" />
                   <span className="font-medium">Layers</span>
-                </Button>
+            </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="glass border-primary/30">
                 {mapLayers.map((layer) => (
