@@ -1,9 +1,10 @@
 # 🗑️ SmartBin - IoT Waste Management System
 
-A modern, microservices-based smart waste management system with real-time IoT integration, gamification, and location-based bin tracking.
+A modern, microservices-based smart waste management system with NFC proximity verification, real-time IoT integration, and gamification.
 
 ## 🌟 Features
 
+- **NFC Proximity Verification** - Users must physically tap NFC tag to open bins (prevents remote access)
 - **Smart Bin Management** - Real-time bin monitoring with fill level tracking
 - **IoT Integration** - MQTT-based communication with waste detection sensors
 - **Gamification** - Earn points for recycling different materials
@@ -70,7 +71,7 @@ SmartBin follows a **microservices architecture** with event-driven communicatio
 http://localhost:3000
 ```
 
-- User dashboard, map view, login/register
+- User dashboard, map view, login/register, admin panel
 
 ### API Gateway
 
@@ -101,9 +102,10 @@ http://localhost:8002/api/bins
 ```
 
 - `GET /list/` - List all bins
-- `POST /list/{id}/open/` - Open a bin
+- `POST /list/{id}/open/` - Open a bin (requires NFC verification)
 - `POST /list/{id}/close/` - Close a bin
 - `POST /list/` - Create bin (admin)
+- `DELETE /list/{id}/` - Delete bin (admin)
 
 ### Detection Service
 
@@ -120,7 +122,8 @@ http://localhost:8003/api/detections
 http://localhost:1880
 ```
 
-- Simulate trash detection
+- **"Simulate: User Taps NFC"** - Simulate NFC tag scan for proximity verification
+- **"Simulate: User Puts Trash"** - Simulate trash detection event
 - Monitor MQTT messages
 - Debug IoT events
 
@@ -153,12 +156,24 @@ cd SmartBin
 2. **Start all services**
 
 ```bash
+make start
+# or
 docker-compose up -d
 ```
 
-3. **Wait for services to initialize** (~30 seconds)
+3. **Run migrations**
 
-4. **Access the application**
+```bash
+make migrate
+```
+
+4. **Create admin user**
+
+```bash
+make admin
+```
+
+5. **Access the application**
 
 ```bash
 # Frontend
@@ -171,52 +186,52 @@ open http://localhost:1880
 open http://localhost:8080
 ```
 
-### Create Test Users
-
-```bash
-# Admin user
-docker exec smartbin_auth python manage.py shell -c "
-from accounts.models import CustomUser;
-CustomUser.objects.create_superuser(
-    username='admin',
-    email='admin@smartbin.com',
-    password='admin123',
-    qr_code='SB-ADMIN-001'
-)
-"
-
-# Regular user
-docker exec smartbin_auth python manage.py shell -c "
-from accounts.models import CustomUser;
-CustomUser.objects.create_user(
-    username='user',
-    email='user@smartbin.com',
-    password='user123',
-    qr_code='SB-USER-001'
-)
-"
-```
-
 ## 🎮 How to Use
 
-### User Flow
+### User Flow (NFC-Based)
 
 1. **Login** at `http://localhost:3000/login`
 2. **View Map** - See available bins near you
 3. **Select Bin** - Click on a bin marker
-4. **Open Bin** - Press "Open Bin" button
-5. **Simulate Trash Detection**:
+4. **Use NFC** - Click "Use NFC" button (waits for NFC scan)
+5. **Simulate NFC Tap**:
    - Go to Node-RED: `http://localhost:1880`
-   - Click "Simulate: User Puts Trash" button
-6. **Earn Points** - Watch the points animation!
-7. **Track Progress** - View your eco-points in the dashboard
+   - Click **"Simulate: User Taps NFC"** button
+   - Bin opens automatically after NFC verification
+6. **Simulate Trash Detection**:
+   - In Node-RED, click **"Simulate: User Puts Trash"** button
+7. **Earn Points** - Watch the points animation! (+10 points)
+8. **Track Progress** - View your eco-points in the dashboard
 
 ### Admin Flow
 
 1. **Access Admin Dashboard** at `http://localhost:3000/admin`
-2. **Add New Bin** - Click on map to set location
+2. **Add New Bin**:
+   - Click "Add New Bin"
+   - Enter bin name and location
+   - Click on map to set coordinates
+   - QR code and NFC tag are auto-generated
 3. **Monitor Bins** - View real-time status and fill levels
-4. **Analytics** - Track usage and recycling statistics
+4. **Delete Bins** - Hover over bin card and click delete
+
+## 🔐 NFC Proximity Verification
+
+### How It Works
+
+1. User selects a bin in the app
+2. User clicks "Use NFC" button
+3. User physically taps phone on bin's NFC tag (simulated in Node-RED)
+4. Backend verifies NFC tag matches the bin
+5. Bin opens automatically if verification succeeds
+6. User deposits waste
+7. IoT sensors detect material (simulated in Node-RED)
+8. Points awarded automatically
+
+### Security Benefits
+
+- **Physical Proximity Required** - NFC range is ~4cm, ensures user is at bin
+- **No Remote Opening** - Can't open bins from distance
+- **Unique Per Bin** - Each bin has unique NFC tag ID (format: `NFC-XXXXXXXXXXXX`)
 
 ## 🛠️ Technology Stack
 
@@ -259,36 +274,53 @@ SmartBin/
 ├── node-red/               # IoT simulation flows
 ├── infrastructure/
 │   └── mosquitto/          # MQTT broker config
+├── Makefile                # Essential commands
 └── docker-compose.yml      # Service orchestration
 ```
 
-## 🔧 Configuration
-
-### Environment Variables
-
-Each service can be configured via environment variables in `docker-compose.yml`:
-
-- **Database**: `DATABASE_URL`
-- **MQTT**: `MQTT_BROKER`, `MQTT_PORT`
-- **JWT**: `SECRET_KEY`
-- **Debug**: `DEBUG=True`
-
 ## 📊 Database Schema
 
-### Core Models
+### Essential Tables (10 total)
 
-- **CustomUser** - User accounts with QR codes and points
-- **Bin** - Smart bin locations and status
-- **MaterialDetection** - Waste detection records
-- **Reclamation** - User-reported issues
+**Application Tables (7):**
+
+- `bins` - Smart bin information (with auto-generated QR codes & NFC tags)
+- `auth_users` - User accounts with points system
+- `auth_points_history` - Points transaction history
+- `bin_usage_logs` - Bin usage tracking
+- `material_detections` - Waste detection events
+- `detection_stats` - Aggregated statistics
+- `reclamations` - User complaints/reports
+
+**Django System Tables (3):**
+
+- `django_content_type` - Content type registry
+- `django_migrations` - Migration tracking
+- `django_session` - Session storage
+
+## 🔧 Makefile Commands
+
+```bash
+make help      # Show all available commands
+make start     # Start all services
+make stop      # Stop all services
+make restart   # Restart all services
+make status    # Show service status
+make logs      # Show logs (use: make logs SERVICE=frontend)
+make build     # Build all services
+make migrate   # Run database migrations
+make admin     # Create admin user
+make clean     # Stop and remove containers/volumes
+make urls      # Show service URLs
+```
 
 ## 🐛 Troubleshooting
 
 ### Services won't start
 
 ```bash
-docker-compose down -v
-docker-compose up -d --build
+make clean
+make start
 ```
 
 ### Frontend build errors
@@ -303,14 +335,20 @@ docker-compose restart frontend
 docker-compose restart detection_service node_red
 ```
 
+### Bin won't open (NFC verification)
+
+1. Make sure you clicked "Use NFC" in the app first
+2. Go to Node-RED and click "Simulate: User Taps NFC"
+3. Check Node-RED debug panel for errors
+
 ### View logs
 
 ```bash
 # All services
-docker-compose logs -f
+make logs
 
 # Specific service
-docker-compose logs -f [service_name]
+make logs SERVICE=detection_service
 ```
 
 ## 🤝 Contributing
