@@ -80,13 +80,22 @@ class BinViewSet(viewsets.ModelViewSet):
         """
         Open a specific bin
         POST /api/bins/{id}/open/
-        Body: {"user_qr_code": "SB-..."}
+        Body: {"user_qr_code": "SB-...", "nfc_tag_id": "NFC-..."}
         """
         bin_instance = self.get_object()
         serializer = OpenBinSerializer(data=request.data)
         
         if serializer.is_valid():
             user_qr_code = serializer.validated_data['user_qr_code']
+            nfc_tag_id = serializer.validated_data.get('nfc_tag_id')
+            
+            # Verify NFC tag if provided (proximity verification)
+            if nfc_tag_id:
+                if nfc_tag_id != bin_instance.nfc_tag_id:
+                    return Response({
+                        'error': 'Invalid NFC tag. Please scan the correct bin.',
+                        'detail': 'You must be near the bin to open it.'
+                    }, status=status.HTTP_403_FORBIDDEN)
             
             # Check if bin is already open
             if bin_instance.is_open:

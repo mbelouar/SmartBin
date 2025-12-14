@@ -8,11 +8,11 @@ class BinSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bin
         fields = [
-            'id', 'name', 'qr_code', 'location', 'latitude', 'longitude',
+            'id', 'name', 'qr_code', 'nfc_tag_id', 'location', 'latitude', 'longitude',
             'capacity', 'fill_level', 'status', 'is_open',
             'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'qr_code', 'is_open', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'qr_code', 'nfc_tag_id', 'is_open', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
 
 
 class BinUsageLogSerializer(serializers.ModelSerializer):
@@ -35,11 +35,22 @@ class OpenBinSerializer(serializers.Serializer):
         required=True,
         help_text="User's QR code (obtained from scanning their app)"
     )
+    nfc_tag_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="NFC tag ID scanned from the bin (for proximity verification)"
+    )
     
     def validate_user_qr_code(self, value):
         """Validate QR code format"""
         if not value.startswith('SB-'):
             raise serializers.ValidationError("Invalid QR code format. Must start with 'SB-'")
+        return value
+    
+    def validate_nfc_tag_id(self, value):
+        """Validate NFC tag format"""
+        if value and not value.startswith('NFC-'):
+            raise serializers.ValidationError("Invalid NFC tag format. Must start with 'NFC-'")
         return value
 
 

@@ -18,6 +18,7 @@ class Bin(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     qr_code = models.CharField(max_length=100, unique=True, help_text="Auto-generated unique bin ID", blank=True)
+    nfc_tag_id = models.CharField(max_length=100, unique=True, help_text="Auto-generated NFC tag ID", blank=True)
     location = models.CharField(max_length=255)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -35,7 +36,7 @@ class Bin(models.Model):
         ordering = ['-created_at']
     
     def save(self, *args, **kwargs):
-        """Auto-generate QR code on creation"""
+        """Auto-generate QR code and NFC tag ID on creation"""
         if not self.qr_code:
             # Generate unique QR code like SB-ABC123
             prefix = 'SB-'
@@ -46,6 +47,17 @@ class Bin(models.Model):
             while Bin.objects.filter(qr_code=self.qr_code).exists():
                 unique_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                 self.qr_code = f"{prefix}{unique_part}"
+        
+        if not self.nfc_tag_id:
+            # Generate unique NFC tag ID like NFC-1A2B3C4D5E6F
+            prefix = 'NFC-'
+            unique_part = ''.join(random.choices(string.hexdigits.upper(), k=12))
+            self.nfc_tag_id = f"{prefix}{unique_part}"
+            
+            # Ensure uniqueness
+            while Bin.objects.filter(nfc_tag_id=self.nfc_tag_id).exists():
+                unique_part = ''.join(random.choices(string.hexdigits.upper(), k=12))
+                self.nfc_tag_id = f"{prefix}{unique_part}"
         
         super().save(*args, **kwargs)
     

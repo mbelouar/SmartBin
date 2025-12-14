@@ -466,6 +466,10 @@ export function AdminDashboard() {
                     <span className="text-sm font-medium text-muted-foreground">QR Code:</span>
                     <span className="text-sm font-mono font-bold">{deleteConfirm.bin.qr_code}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">NFC Tag:</span>
+                    <span className="text-sm font-mono font-bold">{deleteConfirm.bin.nfc_tag_id}</span>
+                  </div>
                 </div>
               </Card>
 

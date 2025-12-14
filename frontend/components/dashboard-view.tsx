@@ -86,7 +86,7 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
           <h3 className="font-bold text-lg mb-1 text-primary">Earn Eco Points & Save the Planet</h3>
           <p className="text-sm text-muted-foreground font-medium">
             Deposit your waste responsibly and earn 10 eco points for each smart disposal
-          </p>
+            </p>
         </div>
       </motion.div>
 
@@ -104,23 +104,23 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
           <p className="text-muted-foreground">No bins found. Please add bins via the admin panel.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bins.map((bin, index) => (
-            <motion.div
-              key={bin.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: index * 0.1,
-                duration: 0.5,
-                type: "spring",
-                stiffness: 100,
-              }}
-            >
-              <BinCard bin={bin} onClick={() => onBinSelect(bin)} />
-            </motion.div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {bins.map((bin, index) => (
+          <motion.div
+            key={bin.id}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: index * 0.1,
+              duration: 0.5,
+              type: "spring",
+              stiffness: 100,
+            }}
+          >
+            <BinCard bin={bin} onClick={() => onBinSelect(bin)} />
+          </motion.div>
+        ))}
+      </div>
       )}
     </div>
   )

@@ -17,6 +17,9 @@ interface BinControlProps {
 }
 
 export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) {
+  const [waitingForNfc, setWaitingForNfc] = useState(false)
+  const [nfcScanned, setNfcScanned] = useState(false)
+  const [scannedNfcTag, setScannedNfcTag] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(10)
   const [isDetecting, setIsDetecting] = useState(false)
@@ -98,33 +101,71 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     }
   }, [isOpen, isDetecting, showPointsAnimation, bin.id])
 
-  const handleOpen = async () => {
-    // Check if bin can be opened
+  // Tell Node-RED which bin user selected
+  const handleUseNfc = async () => {
     if (!canOpen) {
       return
     }
 
-    console.log("[v0] Opening bin:", bin.id)
+    setWaitingForNfc(true)
+    console.log("[User] Selected bin:", bin.name, bin.id)
+    console.log("[User] Waiting for NFC scan from Node-RED...")
+
     try {
-      // Get user QR code or use default
-      const user = getUser()
-      const userQrCode = user?.qr_code || `SB-${user?.id || 'user-001'}`
-      
-      // Call API to open bin (this will publish to MQTT)
-      await binApi.openBin(bin.id, userQrCode)
-      
-      setIsOpen(true)
-      setTimeRemaining(10)
-      setIsDetecting(false)
-      setPointsAwarded(null)
-      setShowPointsAnimation(false)
+      // Tell Node-RED which bin the user selected
+      await fetch('http://localhost:1880/nfc/select-bin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bin_id: bin.id,
+          bin_name: bin.name,
+          nfc_tag_id: bin.nfc_tag_id
+        })
+      })
     } catch (error) {
-      console.error("[v0] Error opening bin:", error)
-      // Still show as open for testing
-      setIsOpen(true)
-      setTimeRemaining(10)
+      console.error("Error selecting bin:", error)
     }
   }
+
+  // Poll for NFC scan and bin opening
+  useEffect(() => {
+    if (waitingForNfc && !isOpen) {
+      const pollInterval = setInterval(async () => {
+        try {
+          // Check if NFC was scanned for this bin
+          const nfcResponse = await fetch(`http://localhost:1880/nfc/check-scan/${bin.id}`)
+          if (nfcResponse.ok) {
+            const nfcData = await nfcResponse.json()
+            if (nfcData.success && nfcData.verified) {
+              console.log("[NFC] NFC verified! Checking if bin opened...")
+              setNfcScanned(true)
+              setScannedNfcTag(nfcData.nfc_tag_id)
+              setWaitingForNfc(false)
+              
+              // Wait a moment then check if bin actually opened
+              setTimeout(async () => {
+                try {
+                  const binResponse = await binApi.get(bin.id)
+                  if (binResponse.is_open) {
+                    console.log("[NFC] Bin opened successfully!")
+                    setIsOpen(true)
+                    setTimeRemaining(10)
+                  }
+                } catch (error) {
+                  console.error("[NFC] Error checking bin status:", error)
+                }
+              }, 500)
+            }
+          }
+        } catch (error) {
+          console.debug("NFC polling:", error)
+        }
+      }, 1000)
+
+      return () => clearInterval(pollInterval)
+    }
+  }, [waitingForNfc, isOpen, bin.id])
+
 
   const handleClose = async () => {
     console.log("[v0] Closing bin:", bin.id)
@@ -487,14 +528,14 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                       exit={{ opacity: 0, y: -10 }}
                     >
                       <Button
-                        onClick={handleOpen}
-                        disabled={!canOpen}
+                        onClick={handleUseNfc}
+                        disabled={!canOpen || waitingForNfc}
                         className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-primary via-accent to-secondary hover:from-primary/90 hover:via-accent/90 hover:to-secondary/90 text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         size="lg"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         <Unlock className="w-5 h-5 relative z-10" />
-                        <span className="relative z-10">Open Bin</span>
+                        <span className="relative z-10">{waitingForNfc ? "Waiting for NFC..." : "Use NFC"}</span>
                       </Button>
                     </motion.div>
                   ) : (
@@ -542,6 +583,8 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     <p className="text-xs font-medium text-foreground mb-0.5">
                       {isOpen 
                         ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for Node-RED detection")
+                        : waitingForNfc
+                        ? "Waiting for NFC scan..."
                         : "Ready to use"}
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
@@ -549,7 +592,9 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         ? (isDetecting 
                             ? "Node-RED detected your deposit. Points will be awarded automatically!"
                             : "Bin is open. Trigger detection from Node-RED to simulate trash deposit and award points.")
-                        : "Click 'Open Bin' to unlock. The bin will automatically detect when you deposit waste and award eco points!"}
+                        : waitingForNfc
+                        ? "Go to Node-RED and click 'Simulate: User Taps NFC' to verify you're near this bin. Bin will open automatically after verification."
+                        : "Click 'Use NFC' then scan NFC tag from Node-RED. Bin will open automatically."}
                     </p>
                   </div>
                 </motion.div>
