@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BinCard } from "@/components/bin-card"
 import { binApi, isAuthenticated, getUser } from "@/lib/api"
 import type { Bin } from "@/lib/types"
-import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2, AlertCircle } from "lucide-react"
+import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2, AlertCircle, AlertTriangle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { MapPicker } from "@/components/map-picker"
 
@@ -21,6 +21,8 @@ export function AdminDashboard() {
   const [showForm, setShowForm] = useState(false)
   const [isAuth, setIsAuth] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; bin: Bin | null }>({ show: false, bin: null })
+  const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -136,17 +138,23 @@ export function AdminDashboard() {
     }
   }
 
-  const handleDelete = async (binId: string) => {
-    if (!confirm("Are you sure you want to delete this bin?")) return
+  const confirmDelete = (bin: Bin) => {
+    setDeleteConfirm({ show: true, bin })
+  }
 
+  const handleDelete = async () => {
+    if (!deleteConfirm.bin) return
+    
+    setDeleting(true)
     try {
-      await binApi.delete(binId)
+      await binApi.delete(deleteConfirm.bin.id)
       
       toast({
         title: "Success",
         description: "Bin deleted successfully!",
       })
       loadBins()
+      setDeleteConfirm({ show: false, bin: null })
     } catch (err: any) {
       console.error("Failed to delete bin:", err)
       toast({
@@ -154,6 +162,8 @@ export function AdminDashboard() {
         description: err.message || "Failed to delete bin",
         variant: "destructive",
       })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -391,7 +401,7 @@ export function AdminDashboard() {
                   variant="destructive"
                   size="sm"
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleDelete(bin.id)}
+                  onClick={() => confirmDelete(bin)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -400,6 +410,98 @@ export function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteConfirm.show && deleteConfirm.bin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !deleting && setDeleteConfirm({ show: false, bin: null })}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-card border-2 border-destructive/50 rounded-2xl shadow-2xl max-w-md w-full p-6 glass"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Warning Icon */}
+              <div className="flex justify-center mb-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center"
+                >
+                  <AlertTriangle className="w-10 h-10 text-destructive" />
+                </motion.div>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-2xl font-bold text-center mb-2 text-destructive">
+                Delete Bin?
+              </h3>
+
+              {/* Description */}
+              <p className="text-center text-muted-foreground mb-4">
+                Are you sure you want to delete this bin? This action cannot be undone.
+              </p>
+
+              {/* Bin Details */}
+              <Card className="p-4 mb-6 border-destructive/30 bg-destructive/5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Name:</span>
+                    <span className="text-sm font-bold">{deleteConfirm.bin.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Location:</span>
+                    <span className="text-sm font-bold">{deleteConfirm.bin.location}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">QR Code:</span>
+                    <span className="text-sm font-mono font-bold">{deleteConfirm.bin.qr_code}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 text-base font-semibold border-2 hover:bg-muted"
+                  onClick={() => setDeleteConfirm({ show: false, bin: null })}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1 h-12 text-base font-semibold gap-2 bg-destructive hover:bg-destructive/90"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-5 h-5" />
+                      Delete Bin
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
