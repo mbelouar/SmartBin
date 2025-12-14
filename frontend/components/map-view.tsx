@@ -59,7 +59,7 @@ export function MapView({ onBinSelect }: MapViewProps) {
   const availableBins = bins.filter((bin) => bin.status === "active" && bin.fill_level < 80)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex flex-col h-full min-h-0">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="flex items-end justify-between mb-4">
@@ -116,26 +116,25 @@ export function MapView({ onBinSelect }: MapViewProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
+        className="flex-1 min-h-0"
       >
-        <Card className="overflow-hidden border-border/50 shadow-2xl shadow-primary/10 glass">
-          <div className="relative bg-card h-[600px] rounded-lg overflow-hidden">
-            {loading ? (
-              <div className="absolute inset-0 flex items-center justify-center z-50 bg-muted/50">
-                <div className="glass px-6 py-4 rounded-2xl border border-primary/30 shadow-2xl">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground font-medium">Loading bins...</p>
-                </div>
+        {loading ? (
+          <Card className="overflow-hidden border-border/50 shadow-2xl shadow-primary/10 glass h-full">
+            <div className="relative bg-card h-full rounded-lg overflow-hidden flex items-center justify-center">
+              <div className="glass px-6 py-4 rounded-2xl border border-primary/30 shadow-2xl">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground font-medium">Loading bins...</p>
               </div>
-            ) : (
-              <SimpleMap
-                bins={bins}
-                selectedBinId={selectedBinId}
-                onBinClick={handleBinClick}
-                userLocation={userLocation}
-              />
-            )}
-          </div>
-        </Card>
+            </div>
+          </Card>
+        ) : (
+          <SimpleMap
+            bins={bins}
+            selectedBinId={selectedBinId}
+            onBinClick={handleBinClick}
+            userLocation={userLocation}
+          />
+        )}
       </motion.div>
     </div>
   )

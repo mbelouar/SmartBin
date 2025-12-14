@@ -232,11 +232,11 @@ export function SimpleMap({
   }, [])
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
       {/* Map Container - Takes 2 columns on large screens */}
-      <div className="lg:col-span-2">
-        <Card className="overflow-hidden border-border/50 shadow-2xl shadow-primary/10 glass h-full">
-          <div className="relative bg-muted/20 h-[500px] lg:h-[600px] rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 min-h-0 flex flex-col">
+        <Card className="overflow-hidden border-border/50 shadow-2xl shadow-primary/10 glass h-full flex flex-col">
+          <div className="relative bg-muted/20 flex-1 rounded-lg overflow-hidden min-h-0">
             {mapLoaded && binsWithCoords.length > 0 ? (
               <MapContainer
                 center={center}
@@ -372,9 +372,9 @@ export function SimpleMap({
       </div>
 
       {/* Bin List Sidebar - Takes 1 column on large screens */}
-      <div className="lg:col-span-1">
-        <Card className="overflow-hidden border-border/50 shadow-2xl glass h-full">
-          <div className="flex flex-col h-full max-h-[500px] lg:max-h-[600px]">
+      <div className="lg:col-span-1 min-h-0 flex flex-col">
+        <Card className="overflow-hidden border-border/50 shadow-2xl glass h-full flex flex-col">
+          <div className="flex flex-col h-full min-h-0">
             {/* Header */}
             <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/10 via-accent/5 to-secondary/10">
               <h3 className="text-sm font-bold text-foreground">

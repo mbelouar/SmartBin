@@ -56,8 +56,8 @@ export default function SmartBinApp() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/50 glass sticky top-0 z-50 shadow-sm">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <header className="border-b border-border/50 glass sticky top-0 z-50 shadow-sm shrink-0">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -119,7 +119,7 @@ export default function SmartBinApp() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 shrink-0">
         <div className="flex gap-2 p-1.5 glass rounded-2xl border border-border/50 w-fit shadow-xl hover-lift">
           <Button
             variant={view === "dashboard" ? "default" : "ghost"}
@@ -143,7 +143,7 @@ export default function SmartBinApp() {
       </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pb-8">
+      <main className={`container mx-auto px-4 ${view === "map" ? "flex-1 min-h-0 flex flex-col pb-0" : "pb-8"}`}>
         {view === "dashboard" ? (
           <DashboardView onBinSelect={handleBinSelect} />
         ) : (
