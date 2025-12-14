@@ -1,26 +1,16 @@
 from rest_framework import serializers
-from .models import Reclamation, ReclamationAttachment
-
-
-class ReclamationAttachmentSerializer(serializers.ModelSerializer):
-    """Serializer for ReclamationAttachment model"""
-    
-    class Meta:
-        model = ReclamationAttachment
-        fields = ['id', 'file_path', 'file_type', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
+from .models import Reclamation
 
 
 class ReclamationSerializer(serializers.ModelSerializer):
     """Serializer for Reclamation model"""
-    attachments = ReclamationAttachmentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Reclamation
         fields = [
             'id', 'user_qr_code', 'bin_id', 'reclamation_type', 'title', 'message',
             'location', 'latitude', 'longitude', 'status', 'priority',
-            'admin_notes', 'resolved_at', 'created_at', 'updated_at', 'attachments'
+            'admin_notes', 'resolved_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'status', 'admin_notes', 'resolved_at', 'created_at', 'updated_at']
     

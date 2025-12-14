@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Reclamation, ReclamationAttachment
+from .models import Reclamation
 
 
 @admin.register(Reclamation)
@@ -44,11 +44,3 @@ class ReclamationAdmin(admin.ModelAdmin):
         queryset.update(priority='high')
         self.message_user(request, f"{queryset.count()} reclamations set to high priority.")
     set_high_priority.short_description = "Set selected reclamations to high priority"
-
-
-@admin.register(ReclamationAttachment)
-class ReclamationAttachmentAdmin(admin.ModelAdmin):
-    list_display = ['reclamation', 'file_type', 'uploaded_at']
-    list_filter = ['file_type', 'uploaded_at']
-    search_fields = ['reclamation__title']
-    readonly_fields = ['id', 'uploaded_at']

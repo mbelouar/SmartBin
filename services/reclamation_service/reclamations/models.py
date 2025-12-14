@@ -63,25 +63,3 @@ class Reclamation(models.Model):
         """Mark reclamation as in progress"""
         self.status = 'in_progress'
         self.save(update_fields=['status', 'updated_at'])
-
-
-class ReclamationAttachment(models.Model):
-    """
-    Optional attachments for reclamations (photos, etc.)
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    reclamation = models.ForeignKey(
-        Reclamation,
-        on_delete=models.CASCADE,
-        related_name='attachments'
-    )
-    file_path = models.CharField(max_length=500, help_text="Path to uploaded file")
-    file_type = models.CharField(max_length=50, help_text="File MIME type")
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'reclamation_attachments'
-        ordering = ['-uploaded_at']
-    
-    def __str__(self):
-        return f"Attachment for {self.reclamation.title}"
