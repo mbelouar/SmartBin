@@ -36,6 +36,37 @@ const parseCoord = (coord: string | number | undefined): number => {
   return typeof coord === 'string' ? parseFloat(coord) : coord
 }
 
+// Component to wait for map pane to be ready
+function MapReady({ onReady }: { onReady: () => void }) {
+  const { useMap } = require("react-leaflet")
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map) return
+
+    // Check if map pane exists
+    const checkMapReady = () => {
+      try {
+        if (map.getPane && map.getPane('tilePane')) {
+          onReady()
+        } else {
+          // Retry after a short delay
+          setTimeout(checkMapReady, 50)
+        }
+      } catch (e) {
+        // Retry if pane not ready
+        setTimeout(checkMapReady, 50)
+      }
+    }
+
+    // Start checking after a small delay
+    const timer = setTimeout(checkMapReady, 100)
+    return () => clearTimeout(timer)
+  }, [map, onReady])
+
+  return null
+}
+
 // Component to fit map bounds to markers
 // This component is only used inside MapContainer which has ssr: false, so it's safe to use hooks
 function FitBounds({ bins }: { bins: Bin[] }) {
@@ -73,7 +104,7 @@ function FitBounds({ bins }: { bins: Bin[] }) {
         // Silently fail - map might not be ready yet
         console.debug("Map bounds fitting skipped:", e)
       }
-    }, 200) // Small delay to ensure map is ready
+    }, 300) // Increased delay to ensure map is ready
 
     return () => clearTimeout(timer)
   }, [binsWithCoords, map])
@@ -311,8 +342,8 @@ export function SimpleMap({
                 zoom={binsWithCoords.length === 1 ? 15 : 13}
                 style={{ height: "100%", width: "100%", zIndex: 0 }}
                 scrollWheelZoom={true}
-                whenReady={() => setMapReady(true)}
               >
+                <MapReady onReady={() => setMapReady(true)} />
                 {mapReady && (
                   <>
                     <TileLayer

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { X, Trash2, Lock, Unlock, MapPin, Clock, Award, Sparkles, CheckCircle2 } from "lucide-react"
+import { X, Trash2, Lock, Unlock, MapPin, Clock, Sparkles, CheckCircle2 } from "lucide-react"
 import type { Bin } from "@/lib/types"
 
 interface BinControlProps {
@@ -18,12 +18,14 @@ interface BinControlProps {
 export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(10)
-  const [isDepositing, setIsDepositing] = useState(false)
+  const [isDetecting, setIsDetecting] = useState(false)
+  const [pointsAwarded, setPointsAwarded] = useState<number | null>(null)
+  const [showPointsAnimation, setShowPointsAnimation] = useState(false)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
 
-    if (isOpen && !isDepositing) {
+    if (isOpen && !isDetecting) {
       timer = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
@@ -36,13 +38,30 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     }
 
     return () => clearInterval(timer)
-  }, [isOpen, isDepositing])
+  }, [isOpen, isDetecting])
+
+  // Simulate IoT detection after bin is opened (3-8 seconds)
+  useEffect(() => {
+    if (isOpen && !isDetecting) {
+      // Random detection time between 3-8 seconds
+      const detectionTime = Math.random() * 5000 + 3000
+      
+      const detectionTimer = setTimeout(() => {
+        handleTrashDetected()
+      }, detectionTime)
+
+      return () => clearTimeout(detectionTimer)
+    }
+  }, [isOpen, isDetecting])
 
   const handleOpen = async () => {
     console.log("[v0] Opening bin via Node-RED:", bin.id)
     try {
       setIsOpen(true)
       setTimeRemaining(10)
+      setIsDetecting(false)
+      setPointsAwarded(null)
+      setShowPointsAnimation(false)
     } catch (error) {
       console.error("[v0] Error opening bin:", error)
     }
@@ -53,20 +72,30 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     try {
       setIsOpen(false)
       setTimeRemaining(10)
-      setIsDepositing(false)
+      setIsDetecting(false)
+      setPointsAwarded(null)
+      setShowPointsAnimation(false)
     } catch (error) {
       console.error("[v0] Error closing bin:", error)
     }
   }
 
-  const handleDepositTrash = () => {
-    setIsDepositing(true)
+  const handleTrashDetected = () => {
+    setIsDetecting(true)
+    const points = 10
+    setPointsAwarded(points)
+    setShowPointsAnimation(true)
+    
+    // Award points
+    onTrashDeposited()
+    
+    // Close bin after animation
     setTimeout(() => {
-      onTrashDeposited()
-      setIsDepositing(false)
       handleClose()
-      onClose()
-    }, 1500)
+      setTimeout(() => {
+        onClose()
+      }, 500)
+    }, 2500)
   }
 
   const getStatusColor = () => {
@@ -185,33 +214,144 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                 </div>
               </div>
 
-              {/* Timer Display */}
+              {/* Detection Status */}
               <AnimatePresence>
-                {isOpen && (
+                {isOpen && !showPointsAnimation && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                    className="relative flex items-center justify-center gap-3 p-4 rounded-lg bg-gradient-to-br from-amber-500/20 via-yellow-500/20 to-amber-400/20 border-2 border-amber-400/40 overflow-hidden"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/20 to-transparent animate-[shimmer_2s_infinite]" />
-                    <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Clock className="w-6 h-6 text-amber-500 relative z-10" />
-                    </motion.div>
-                    <div className="text-center relative z-10">
-                      <p className="text-xs text-muted-foreground font-medium mb-0.5">Auto-close in</p>
-                      <motion.p
-                        key={timeRemaining}
-                        initial={{ scale: 1.2 }}
-                        animate={{ scale: 1 }}
-                        className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text text-transparent"
+                    {!isDetecting ? (
+                      <div className="relative flex items-center justify-center gap-3 p-4 rounded-lg bg-gradient-to-br from-blue-500/20 via-blue-400/20 to-blue-500/20 border-2 border-blue-400/40 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/20 to-transparent animate-[shimmer_2s_infinite]" />
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Clock className="w-6 h-6 text-blue-500 relative z-10" />
+                        </motion.div>
+                        <div className="text-center relative z-10">
+                          <p className="text-xs text-muted-foreground font-medium mb-0.5">Waiting for detection</p>
+                          <motion.p
+                            key={timeRemaining}
+                            initial={{ scale: 1.2 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3 }}
+                            className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent"
+                          >
+                            {timeRemaining}s
+                          </motion.p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex items-center justify-center gap-3 p-4 rounded-lg bg-gradient-to-br from-green-500/20 via-emerald-400/20 to-green-500/20 border-2 border-green-400/40 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/20 to-transparent animate-[shimmer_2s_infinite]" />
+                        <motion.div
+                          animate={{ scale: [1, 1.2], rotate: 360 }}
+                          transition={{ 
+                            scale: { duration: 0.5, repeat: Infinity, repeatType: "reverse" },
+                            rotate: { duration: 1, repeat: Infinity, ease: "linear" }
+                          }}
+                        >
+                          <CheckCircle2 className="w-6 h-6 text-green-500 relative z-10" />
+                        </motion.div>
+                        <div className="text-center relative z-10">
+                          <p className="text-xs text-muted-foreground font-medium mb-0.5">Trash detected!</p>
+                          <p className="text-sm font-bold text-green-500">Processing...</p>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Points Animation */}
+              <AnimatePresence>
+                {showPointsAnimation && pointsAwarded && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                    className="relative flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-green-500/30 via-emerald-400/20 to-green-500/30 border-2 border-green-400/50 overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/30 to-transparent animate-[shimmer_2s_infinite]" />
+                    
+                    {/* Sparkles Animation */}
+                    {[...Array(12)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute"
+                        initial={{
+                          x: "50%",
+                          y: "50%",
+                          opacity: 0,
+                        }}
+                        animate={{
+                          x: `${50 + Math.cos((i * Math.PI * 2) / 12) * 100}%`,
+                          y: `${50 + Math.sin((i * Math.PI * 2) / 12) * 100}%`,
+                          opacity: [0, 1, 0],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          delay: 0.2,
+                          repeat: 0,
+                        }}
                       >
-                        {timeRemaining}s
-                      </motion.p>
-                    </div>
+                        <Sparkles className="w-4 h-4 text-green-400" />
+                      </motion.div>
+                    ))}
+                    
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", delay: 0.1 }}
+                      className="relative z-10 mb-2"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-2xl shadow-green-500/50">
+                        <CheckCircle2 className="w-8 h-8 text-white" />
+                      </div>
+                    </motion.div>
+                    
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-sm font-medium text-muted-foreground mb-1 relative z-10"
+                    >
+                      Points Awarded!
+                    </motion.p>
+                    
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", delay: 0.3, stiffness: 200, damping: 15 }}
+                      className="relative z-10"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-green-400 animate-pulse" />
+                        <motion.span
+                          key={pointsAwarded}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", delay: 0.4, stiffness: 200, damping: 15 }}
+                          className="text-5xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 bg-clip-text text-transparent"
+                        >
+                          +{pointsAwarded}
+                        </motion.span>
+                        <Sparkles className="w-6 h-6 text-green-400 animate-pulse" />
+                      </div>
+                    </motion.div>
+                    
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-xs text-muted-foreground mt-2 relative z-10"
+                    >
+                      Thank you for recycling! 🌱
+                    </motion.p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -238,44 +378,16 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     </motion.div>
                   ) : (
                     <motion.div
-                      key="deposit"
+                      key="close"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="space-y-3"
                     >
-                      <Button
-                        onClick={handleDepositTrash}
-                        disabled={isDepositing}
-                        className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-500/90 hover:via-emerald-500/90 hover:to-green-600/90 text-white shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group"
-                        size="lg"
-                      >
-                        {isDepositing ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            >
-                              <Sparkles className="w-5 h-5" />
-                            </motion.div>
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                            <Award className="w-5 h-5 relative z-10 group-hover:scale-110 transition-transform" />
-                            <span className="relative z-10">Deposit Trash</span>
-                            <Badge className="bg-white/20 text-white border-white/30 relative z-10 text-xs">
-                              +10 pts
-                            </Badge>
-                            <Sparkles className="w-4 h-4 relative z-10 animate-pulse" />
-                          </>
-                        )}
-                      </Button>
                       <Button
                         onClick={handleClose}
                         variant="outline"
-                        className="w-full h-11 gap-2 bg-transparent border-2 border-border hover:bg-muted/50 hover:border-primary/30 transition-all duration-300 font-semibold"
+                        disabled={isDetecting}
+                        className="w-full h-11 gap-2 bg-transparent border-2 border-border hover:bg-muted/50 hover:border-primary/30 transition-all duration-300 font-semibold disabled:opacity-50"
                         size="lg"
                       >
                         <Lock className="w-4 h-4" />
@@ -295,19 +407,27 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
               >
                 <div className="mt-0.5">
                   {isOpen ? (
-                    <Clock className="w-4 h-4 text-blue-500" />
+                    isDetecting ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-blue-500" />
+                    )
                   ) : (
                     <CheckCircle2 className="w-4 h-4 text-blue-500" />
                   )}
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-medium text-foreground mb-0.5">
-                    {isOpen ? "Bin is open" : "Ready to use"}
+                    {isOpen 
+                      ? (isDetecting ? "Trash detected!" : "Bin is open - waiting for detection")
+                      : "Ready to use"}
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {isOpen
-                      ? "The bin will automatically close after 10 seconds. Please deposit your waste responsibly."
-                      : "Click 'Open Bin' to unlock and dispose your waste. Earn eco points for each deposit!"}
+                      ? (isDetecting 
+                          ? "The IoT sensor detected your deposit. Points will be awarded automatically!"
+                          : "Place your waste in the bin. The IoT sensor will automatically detect it and award points.")
+                      : "Click 'Open Bin' to unlock. The bin will automatically detect when you deposit waste and award eco points!"}
                   </p>
                 </div>
               </motion.div>
