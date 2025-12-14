@@ -1,89 +1,140 @@
-# 🗑️ SmartBin - Intelligent Waste Management System
+# 🗑️ SmartBin - IoT Waste Management System
 
-A microservices-based smart trash management system that rewards users for proper waste disposal.
+A modern, microservices-based smart waste management system with real-time IoT integration, gamification, and location-based bin tracking.
 
-## 🎯 Features
+## 🌟 Features
 
-- **QR Code Scanning**: Users scan QR codes on bins to open them
-- **Automatic Bin Control**: Bins open/close via Node-RED simulation
-- **Material Detection**: AI-powered detection of trash materials (paper, plastic, glass, other)
-- **Points Reward System**: Users earn points for proper waste disposal
-- **Reclamations**: Users can submit complaints about bins
-- **Real-time Communication**: MQTT-based messaging between services
-- **Microservices Architecture**: Scalable Django-based services
+- **Smart Bin Management** - Real-time bin monitoring with fill level tracking
+- **IoT Integration** - MQTT-based communication with waste detection sensors
+- **Gamification** - Earn points for recycling different materials
+- **Interactive Map** - Find nearby bins with live availability status
+- **Material Detection** - AI-powered waste classification
+- **User Dashboard** - Track eco-points, recycling stats, and achievements
+- **Admin Panel** - Manage bins, view analytics, and monitor system health
 
 ## 🏗️ Architecture
 
+SmartBin follows a **microservices architecture** with event-driven communication via MQTT.
+
 ```
-┌─────────────┐
-│   Frontend  │ (Port 3000)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ API Gateway │ (Port 8000)
-└──────┬──────┘
-       │
-       ├──────────────┬──────────────┬──────────────┬──────────────┐
-       ▼              ▼              ▼              ▼              ▼
-┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
-│   Auth   │   │   Bin    │   │Detection │   │Reclamation│   │PostgreSQL│
-│ Service  │   │ Service  │   │ Service  │   │  Service  │   │          │
-│ (8001)   │   │ (8002)   │   │ (8003)   │   │  (8004)   │   │ (5432)   │
-└──────────┘   └────┬─────┘   └────┬─────┘   └──────────┘   └──────────┘
-                    │              │
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │   Mosquitto  │
-                    │  MQTT Broker │
-                    │    (1883)    │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │   Node-RED   │
-                    │    (1880)    │
-                    └──────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         Frontend (Next.js)                       │
+│                    http://localhost:3000                         │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     API Gateway (Django)                         │
+│                    http://localhost:8000                         │
+│              Routes requests to microservices                    │
+└──┬────────────┬────────────┬────────────┬─────────────────────┘
+   │            │            │            │
+   ▼            ▼            ▼            ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│   Auth   │ │   Bin    │ │Detection │ │Reclamation│
+│ Service  │ │ Service  │ │ Service  │ │  Service  │
+│  :8001   │ │  :8002   │ │  :8003   │ │   :8004   │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └──────────┘
+     │            │            │
+     └────────────┴────────────┴─────────────┐
+                                              │
+                  ┌───────────────────────────┼─────────────────┐
+                  │                           │                 │
+                  ▼                           ▼                 ▼
+         ┌──────────────┐          ┌──────────────┐   ┌──────────────┐
+         │    MySQL     │          │   Mosquitto  │   │   Node-RED   │
+         │   Database   │          │ MQTT Broker  │   │ IoT Simulator│
+         │    :3306     │          │    :1883     │   │    :1880     │
+         └──────────────┘          └──────────────┘   └──────────────┘
 ```
 
-## 📋 Services
+## 🔄 Service Communication
 
-1. **Auth Service** (Port 8001)
+### HTTP (REST APIs)
 
-   - User registration and authentication
-   - JWT token management
-   - Points tracking
+- **Frontend** → **Gateway** → **Microservices**
+- JWT-based authentication
+- JSON request/response
 
-2. **Bin Service** (Port 8002)
+### MQTT (Event-Driven)
 
-   - Bin management (CRUD)
-   - Open/close bin operations
-   - MQTT publisher for bin commands
+- **Bin Service** → publishes `bin/{id}/open` and `bin/{id}/close`
+- **Node-RED** → publishes `bin/{id}/detected` (trash detection)
+- **Detection Service** → subscribes to `bin/+/detected` (processes detections)
 
-3. **Detection Service** (Port 8003)
+## 📡 Service Endpoints
 
-   - Material detection logging
-   - MQTT subscriber for detection events
-   - Points allocation to users
+### Frontend (Next.js)
 
-4. **Reclamation Service** (Port 8004)
+```
+http://localhost:3000
+```
 
-   - User complaint management
-   - CRUD operations for reclamations
+- User dashboard, map view, login/register
 
-5. **API Gateway** (Port 8000)
+### API Gateway
 
-   - Routes all frontend requests
-   - Service orchestration
-   - Single entry point
+```
+http://localhost:8000
+```
 
-6. **Node-RED** (Port 1880)
-   - Bin operation simulation
-   - Material detection simulation
-   - MQTT integration
+- `/api/auth/*` → Auth Service
+- `/api/bins/*` → Bin Service
+- `/api/detections/*` → Detection Service
+- `/api/reclamations/*` → Reclamation Service
 
-## 🚀 Getting Started
+### Auth Service
+
+```
+http://localhost:8001/api/auth
+```
+
+- `POST /login/` - User login
+- `POST /register/` - User registration
+- `GET /profile/` - User profile
+- `GET /points/history/` - Points history
+
+### Bin Service
+
+```
+http://localhost:8002/api/bins
+```
+
+- `GET /list/` - List all bins
+- `POST /list/{id}/open/` - Open a bin
+- `POST /list/{id}/close/` - Close a bin
+- `POST /list/` - Create bin (admin)
+
+### Detection Service
+
+```
+http://localhost:8003/api/detections
+```
+
+- `GET /list/` - List detections
+- `GET /stats/` - Detection statistics
+
+### Node-RED (IoT Simulator)
+
+```
+http://localhost:1880
+```
+
+- Simulate trash detection
+- Monitor MQTT messages
+- Debug IoT events
+
+### phpMyAdmin (Database UI)
+
+```
+http://localhost:8080
+```
+
+- Server: `mysql`
+- Username: `smartbin_user`
+- Password: `smartbin_pass`
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -94,166 +145,194 @@ A microservices-based smart trash management system that rewards users for prope
 
 1. **Clone the repository**
 
-   ```bash
-   git clone <repository-url>
-   cd SmartBin
-   ```
-
-2. **Build and start all services**
-
-   ```bash
-   docker-compose up --build
-   ```
-
-3. **Access the services**
-   - Frontend: http://localhost:3000
-   - API Gateway: http://localhost:8000
-   - Node-RED: http://localhost:1880
-   - Auth Service: http://localhost:8001
-   - Bin Service: http://localhost:8002
-   - Detection Service: http://localhost:8003
-   - Reclamation Service: http://localhost:8004
-
-### First Time Setup
-
-1. **Create superuser for each service** (in separate terminals):
-
-   ```bash
-   docker exec -it smartbin_auth python manage.py createsuperuser
-   docker exec -it smartbin_bin_service python manage.py createsuperuser
-   docker exec -it smartbin_detection python manage.py createsuperuser
-   docker exec -it smartbin_reclamation python manage.py createsuperuser
-   ```
-
-2. **Access Django Admin panels**:
-   - Auth: http://localhost:8001/admin
-   - Bins: http://localhost:8002/admin
-   - Detection: http://localhost:8003/admin
-   - Reclamation: http://localhost:8004/admin
-
-## 📡 MQTT Topics
-
-- `bin/{bin_id}/open` - Command to open a bin
-- `bin/{bin_id}/close` - Command to close a bin
-- `bin/{bin_id}/detected` - Material detection event
-- `bin/{bin_id}/status` - Bin status updates
-
-## 🔄 Workflow
-
-1. User opens app and scans QR code on bin
-2. Frontend sends request to Gateway → Bin Service
-3. Bin Service publishes MQTT message to open bin
-4. Node-RED receives message and simulates bin opening
-5. User throws trash
-6. Node-RED simulates material detection
-7. Node-RED publishes detection result via MQTT
-8. Detection Service receives event and:
-   - Logs the detection
-   - Awards points to user (via Auth Service)
-   - Sends acknowledgment
-9. User sees updated points in frontend
-
-## 🛠️ Development
-
-### Running individual services
-
 ```bash
-# Auth Service
-cd services/auth_service
-python manage.py runserver 8001
-
-# Bin Service
-cd services/bin_service
-python manage.py runserver 8002
-
-# Detection Service
-cd services/detection_service
-python manage.py runserver 8003
-
-# Reclamation Service
-cd services/reclamation_service
-python manage.py runserver 8004
+git clone <repository-url>
+cd SmartBin
 ```
 
-### Viewing logs
+2. **Start all services**
+
+```bash
+docker-compose up -d
+```
+
+3. **Wait for services to initialize** (~30 seconds)
+
+4. **Access the application**
+
+```bash
+# Frontend
+open http://localhost:3000
+
+# Node-RED (IoT Simulator)
+open http://localhost:1880
+
+# phpMyAdmin (Database)
+open http://localhost:8080
+```
+
+### Create Test Users
+
+```bash
+# Admin user
+docker exec smartbin_auth python manage.py shell -c "
+from accounts.models import CustomUser;
+CustomUser.objects.create_superuser(
+    username='admin',
+    email='admin@smartbin.com',
+    password='admin123',
+    qr_code='SB-ADMIN-001'
+)
+"
+
+# Regular user
+docker exec smartbin_auth python manage.py shell -c "
+from accounts.models import CustomUser;
+CustomUser.objects.create_user(
+    username='user',
+    email='user@smartbin.com',
+    password='user123',
+    qr_code='SB-USER-001'
+)
+"
+```
+
+## 🎮 How to Use
+
+### User Flow
+
+1. **Login** at `http://localhost:3000/login`
+2. **View Map** - See available bins near you
+3. **Select Bin** - Click on a bin marker
+4. **Open Bin** - Press "Open Bin" button
+5. **Simulate Trash Detection**:
+   - Go to Node-RED: `http://localhost:1880`
+   - Click "Simulate: User Puts Trash" button
+6. **Earn Points** - Watch the points animation!
+7. **Track Progress** - View your eco-points in the dashboard
+
+### Admin Flow
+
+1. **Access Admin Dashboard** at `http://localhost:3000/admin`
+2. **Add New Bin** - Click on map to set location
+3. **Monitor Bins** - View real-time status and fill levels
+4. **Analytics** - Track usage and recycling statistics
+
+## 🛠️ Technology Stack
+
+### Frontend
+
+- **Framework**: Next.js 16 (React 19)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS, shadcn/ui
+- **Maps**: Leaflet (OpenStreetMap)
+- **Animations**: Framer Motion
+
+### Backend
+
+- **Framework**: Django + Django REST Framework
+- **Language**: Python 3.11
+- **Authentication**: JWT (SimpleJWT)
+- **API Pattern**: RESTful microservices
+
+### Infrastructure
+
+- **Database**: MySQL 8.0
+- **Message Broker**: Mosquitto MQTT
+- **IoT Simulator**: Node-RED
+- **Containerization**: Docker + Docker Compose
+
+## 📁 Project Structure
+
+```
+SmartBin/
+├── frontend/                 # Next.js frontend application
+│   ├── app/                 # Next.js app router
+│   ├── components/          # React components
+│   └── lib/                 # API client, types, utilities
+├── services/
+│   ├── auth_service/        # User authentication & management
+│   ├── bin_service/         # Bin CRUD & IoT control
+│   ├── detection_service/   # Material detection & points
+│   └── reclamation_service/ # Issue reporting
+├── gateway/                 # API Gateway (routing)
+├── node-red/               # IoT simulation flows
+├── infrastructure/
+│   └── mosquitto/          # MQTT broker config
+└── docker-compose.yml      # Service orchestration
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Each service can be configured via environment variables in `docker-compose.yml`:
+
+- **Database**: `DATABASE_URL`
+- **MQTT**: `MQTT_BROKER`, `MQTT_PORT`
+- **JWT**: `SECRET_KEY`
+- **Debug**: `DEBUG=True`
+
+## 📊 Database Schema
+
+### Core Models
+
+- **CustomUser** - User accounts with QR codes and points
+- **Bin** - Smart bin locations and status
+- **MaterialDetection** - Waste detection records
+- **Reclamation** - User-reported issues
+
+## 🐛 Troubleshooting
+
+### Services won't start
+
+```bash
+docker-compose down -v
+docker-compose up -d --build
+```
+
+### Frontend build errors
+
+```bash
+docker-compose restart frontend
+```
+
+### MQTT not receiving messages
+
+```bash
+docker-compose restart detection_service node_red
+```
+
+### View logs
 
 ```bash
 # All services
 docker-compose logs -f
 
 # Specific service
-docker-compose logs -f auth_service
-docker-compose logs -f mosquitto
+docker-compose logs -f [service_name]
 ```
-
-### Stopping services
-
-```bash
-docker-compose down
-
-# With volumes (clean database)
-docker-compose down -v
-```
-
-## 📦 Technology Stack
-
-- **Backend**: Django 4.2, Django REST Framework
-- **Database**: PostgreSQL 15
-- **Message Broker**: Eclipse Mosquitto (MQTT)
-- **IoT Simulation**: Node-RED
-- **Containerization**: Docker & Docker Compose
-- **Authentication**: JWT (djangorestframework-simplejwt)
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-
-## 🧪 Testing
-
-```bash
-# Run tests for a specific service
-docker exec -it smartbin_auth python manage.py test
-
-# Run with coverage
-docker exec -it smartbin_auth coverage run manage.py test
-docker exec -it smartbin_auth coverage report
-```
-
-## 🔐 Security Notes
-
-⚠️ **Important**: The current configuration is for DEVELOPMENT ONLY
-
-For production:
-
-1. Change all `SECRET_KEY` values
-2. Set `DEBUG=False`
-3. Enable MQTT authentication (set `allow_anonymous=false`)
-4. Use environment variables for sensitive data
-5. Set up proper CORS policies
-6. Use HTTPS/TLS for all services
-7. Implement rate limiting
-8. Add proper logging and monitoring
-
-## 📝 API Documentation
-
-Once services are running, access API docs at:
-
-- http://localhost:8000/api/docs/ (Gateway - coming soon)
-- Each service has its own `/api/` endpoints
 
 ## 🤝 Contributing
 
+Contributions are welcome! Please follow these steps:
+
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📄 License
+## 📝 License
 
-[Your License Here]
+This project is licensed under the MIT License.
 
-## 👥 Team
+## 🙏 Acknowledgments
 
-[Your Team Info Here]
+- OpenStreetMap for map tiles
+- Node-RED for IoT simulation
+- shadcn/ui for beautiful UI components
 
-## 📞 Support
+---
 
-For issues and questions, please open an issue on GitHub.
+**Built with ❤️ for a sustainable future** 🌍♻️
