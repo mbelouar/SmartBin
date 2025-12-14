@@ -12,9 +12,10 @@ import { Locate, Layers, Loader2 } from "lucide-react"
 
 interface MapViewProps {
   onBinSelect: (bin: Bin) => void
+  selectedBin?: Bin | null
 }
 
-export function MapView({ onBinSelect }: MapViewProps) {
+export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
   const [selectedBinId, setSelectedBinId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,7 +53,12 @@ export function MapView({ onBinSelect }: MapViewProps) {
   }
 
   const handleBinClick = (bin: Bin) => {
+    // Only select the bin to show in sidebar, don't trigger full-screen modal
     setSelectedBinId(bin.id)
+  }
+
+  const handleUseBin = (bin: Bin) => {
+    // Only trigger full-screen modal when "Use This Bin" is clicked
     onBinSelect(bin)
   }
 
@@ -132,7 +138,9 @@ export function MapView({ onBinSelect }: MapViewProps) {
             bins={bins}
             selectedBinId={selectedBinId}
             onBinClick={handleBinClick}
+            onUseBin={handleUseBin}
             userLocation={userLocation}
+            isModalOpen={!!selectedBin}
           />
         )}
       </motion.div>

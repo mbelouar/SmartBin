@@ -147,7 +147,7 @@ export default function SmartBinApp() {
         {view === "dashboard" ? (
           <DashboardView onBinSelect={handleBinSelect} />
         ) : (
-          <MapView onBinSelect={handleBinSelect} />
+          <MapView onBinSelect={handleBinSelect} selectedBin={selectedBin} />
         )}
       </main>
 

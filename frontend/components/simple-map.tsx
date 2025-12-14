@@ -22,7 +22,9 @@ interface SimpleMapProps {
   bins: Bin[]
   selectedBinId: string | null
   onBinClick: (bin: Bin) => void
+  onUseBin?: (bin: Bin) => void
   userLocation?: { lat: number; lng: number }
+  isModalOpen?: boolean
 }
 
 // Helper to parse coordinate (handles both string and number)
@@ -44,17 +46,33 @@ function FitBounds({ bins }: { bins: Bin[] }) {
     const L = getLeaflet()
     if (!L || !L.latLngBounds) return
     
-    try {
-      const bounds = L.latLngBounds(
-        binsWithCoords.map((bin) => [
-          parseCoord(bin.latitude),
-          parseCoord(bin.longitude),
-        ])
-      )
-      map.fitBounds(bounds, { padding: [50, 50] })
-    } catch (e) {
-      console.error("Error fitting bounds:", e)
-    }
+    // Wait for map to be fully initialized
+    const timer = setTimeout(() => {
+      try {
+        // Check if map is ready and has the necessary methods
+        if (!map || typeof map.fitBounds !== 'function' || !map.getContainer) return
+        
+        const bounds = L.latLngBounds(
+          binsWithCoords.map((bin) => {
+            const lat = parseCoord(bin.latitude)
+            const lng = parseCoord(bin.longitude)
+            // Only include valid coordinates
+            if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null
+            return [lat, lng]
+          }).filter((coord): coord is [number, number] => coord !== null)
+        )
+        
+        // Check if we have valid bounds
+        if (bounds && bounds.isValid && bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50] })
+        }
+      } catch (e) {
+        // Silently fail - map might not be ready yet
+        console.debug("Map bounds fitting skipped:", e)
+      }
+    }, 200) // Small delay to ensure map is ready
+
+    return () => clearTimeout(timer)
   }, [binsWithCoords, map])
 
   return null
@@ -151,7 +169,9 @@ export function SimpleMap({
   bins,
   selectedBinId,
   onBinClick,
+  onUseBin,
   userLocation,
+  isModalOpen = false,
 }: SimpleMapProps) {
   const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -263,8 +283,8 @@ export function SimpleMap({
                       icon={createBinIcon(bin)}
                       eventHandlers={{
                         click: () => {
+                          // Only select bin to show in sidebar, don't trigger full-screen modal
                           onBinClick(bin)
-                          setActiveInfoCard(bin.id === activeInfoCard ? null : bin.id)
                         },
                       }}
                     >
@@ -283,7 +303,7 @@ export function SimpleMap({
                             className="w-full mt-2 text-xs"
                             onClick={() => onBinClick(bin)}
                           >
-                            View Details
+                            Select Bin
                           </Button>
                         </div>
                       </Popup>
@@ -319,28 +339,30 @@ export function SimpleMap({
               </div>
             )}
 
-            {/* Map Legend */}
-            <div className="absolute top-4 right-4 z-[1000] glass border border-primary/30 rounded-lg p-3 shadow-xl">
-              <h4 className="text-xs font-bold mb-2 text-foreground">Bin Status</h4>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-xs">Available</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span className="text-xs">Filling</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-orange-500" />
-                  <span className="text-xs">Almost Full</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-xs">Full</span>
+            {/* Map Legend - Hide when modal is open */}
+            {!isModalOpen && (
+              <div className="absolute top-4 right-4 z-[1000] glass border border-primary/30 rounded-lg p-3 shadow-xl">
+                <h4 className="text-xs font-bold mb-2 text-foreground">Bin Status</h4>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-xs">Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <span className="text-xs">Filling</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <span className="text-xs">Almost Full</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-xs">Full</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* User Location Indicator */}
             {userLocation && (
@@ -371,37 +393,41 @@ export function SimpleMap({
         </Card>
       </div>
 
-      {/* Bin List Sidebar - Takes 1 column on large screens */}
+      {/* Bin Details Sidebar - Takes 1 column on large screens */}
       <div className="lg:col-span-1 min-h-0 flex flex-col">
         <Card className="overflow-hidden border-border/50 shadow-2xl glass h-full flex flex-col">
           <div className="flex flex-col h-full min-h-0">
             {/* Header */}
             <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/10 via-accent/5 to-secondary/10">
               <h3 className="text-sm font-bold text-foreground">
-                Smart Bins ({binsWithCoords.length})
+                {selectedBinId ? "Bin Details" : "Select a Bin"}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Click to select and use a bin
+                {selectedBinId 
+                  ? "Click another bin to see its details" 
+                  : "Click on any bin marker on the map"}
               </p>
             </div>
 
-            {/* Bin Cards List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              <AnimatePresence mode="popLayout">
-                {binsWithCoords.length === 0 ? (
+            {/* Bin Details Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <AnimatePresence mode="wait">
+                {!selectedBinId ? (
                   <motion.div
+                    key="empty"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="text-center py-12"
                   >
-                    <MapPin className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-sm text-muted-foreground">No bins with locations found</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Add bins with GPS coordinates from the admin dashboard
+                    <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <p className="text-sm text-muted-foreground mb-2">No bin selected</p>
+                    <p className="text-xs text-muted-foreground">
+                      Click on any bin marker on the map to view its details
                     </p>
                   </motion.div>
                 ) : (
-                  binsWithCoords.map((bin, index) => {
+                  binsWithCoords.filter(bin => bin.id === selectedBinId).map((bin, index) => {
                     const isSelected = selectedBinId === bin.id
                     const isActive = activeInfoCard === bin.id
                     const colorClass = getBinColorClass(bin)
@@ -541,9 +567,13 @@ export function SimpleMap({
                                     <Button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        onBinClick(bin)
+                                        if (onUseBin) {
+                                          onUseBin(bin)
+                                        } else {
+                                          onBinClick(bin)
+                                        }
                                       }}
-                                      className="w-full gap-2 bg-gradient-eco hover:scale-105 transition-all text-xs"
+                                      className="w-full gap-2 bg-gradient-eco hover:scale-[1.02] hover:shadow-lg transition-all duration-200 text-xs font-semibold"
                                       size="sm"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -562,8 +592,8 @@ export function SimpleMap({
               </AnimatePresence>
             </div>
 
-            {/* Stats Footer */}
-            <div className="p-4 border-t border-border/50 bg-gradient-to-r from-primary/5 via-accent/5 to-secondary/5">
+            {/* Stats Footer - Always visible */}
+            <div className="p-4 border-t border-border/50 bg-gradient-to-r from-primary/5 via-accent/5 to-secondary/5 shrink-0">
               <div className="grid grid-cols-2 gap-2">
                 <div className="glass rounded-lg p-2 border border-primary/30">
                   <p className="text-xs text-muted-foreground">Available</p>
@@ -572,7 +602,7 @@ export function SimpleMap({
                   </p>
                 </div>
                 <div className="glass rounded-lg p-2 border border-border/30">
-                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="text-xs text-muted-foreground">Total Bins</p>
                   <p className="text-lg font-bold text-foreground">{binsWithCoords.length}</p>
                 </div>
               </div>
