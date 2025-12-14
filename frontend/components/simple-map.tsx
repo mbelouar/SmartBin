@@ -15,17 +15,8 @@ const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLa
 const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
 const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
 
-// Import Leaflet CSS
+// Import Leaflet CSS - Next.js handles this correctly for SSR
 import "leaflet/dist/leaflet.css"
-import L from "leaflet"
-
-// Fix for default marker icons in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-})
 
 interface SimpleMapProps {
   bins: Bin[]
@@ -41,6 +32,7 @@ const parseCoord = (coord: string | number | undefined): number => {
 }
 
 // Component to fit map bounds to markers
+// This component is only used inside MapContainer which has ssr: false, so it's safe to use hooks
 function FitBounds({ bins }: { bins: Bin[] }) {
   const { useMap } = require("react-leaflet")
   const map = useMap()
@@ -49,21 +41,54 @@ function FitBounds({ bins }: { bins: Bin[] }) {
   useEffect(() => {
     if (binsWithCoords.length === 0 || !map) return
 
-    const bounds = L.latLngBounds(
-      binsWithCoords.map((bin) => [
-        parseCoord(bin.latitude),
-        parseCoord(bin.longitude),
-      ])
-    )
-
-    map.fitBounds(bounds, { padding: [50, 50] })
+    const L = getLeaflet()
+    if (!L || !L.latLngBounds) return
+    
+    try {
+      const bounds = L.latLngBounds(
+        binsWithCoords.map((bin) => [
+          parseCoord(bin.latitude),
+          parseCoord(bin.longitude),
+        ])
+      )
+      map.fitBounds(bounds, { padding: [50, 50] })
+    } catch (e) {
+      console.error("Error fitting bounds:", e)
+    }
   }, [binsWithCoords, map])
 
   return null
 }
 
+// Helper to get Leaflet (only on client) - lazy loaded
+let leafletModule: any = null
+const getLeaflet = () => {
+  if (typeof window === "undefined") return null
+  if (!leafletModule) {
+    try {
+      leafletModule = require("leaflet")
+      // Fix for default marker icons in Next.js
+      if (leafletModule && leafletModule.Icon && leafletModule.Icon.Default) {
+        delete (leafletModule.Icon.Default.prototype as any)._getIconUrl
+        leafletModule.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        })
+      }
+    } catch (e) {
+      console.error("Failed to load Leaflet:", e)
+      return null
+    }
+  }
+  return leafletModule
+}
+
 // Custom marker icon based on bin status
 const createBinIcon = (bin: Bin) => {
+  const L = getLeaflet()
+  if (!L) return null
+  
   const getColor = () => {
     if (bin.status === "full" || bin.fill_level >= 90) return "#ef4444" // red
     if (bin.fill_level >= 70) return "#f97316" // orange
@@ -97,6 +122,28 @@ const createBinIcon = (bin: Bin) => {
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
+  })
+}
+
+// User location marker icon
+const createUserIcon = () => {
+  const L = getLeaflet()
+  if (!L) return null
+  
+  return L.divIcon({
+    className: "custom-user-marker",
+    html: `
+      <div style="
+        width: 24px;
+        height: 24px;
+        background-color: #3b82f6;
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   })
 }
 
@@ -248,21 +295,7 @@ export function SimpleMap({
                 {userLocation && (
                   <Marker
                     position={[userLocation.lat, userLocation.lng]}
-                    icon={L.divIcon({
-                      className: "custom-user-marker",
-                      html: `
-                        <div style="
-                          width: 24px;
-                          height: 24px;
-                          background-color: #3b82f6;
-                          border: 3px solid white;
-                          border-radius: 50%;
-                          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                        "></div>
-                      `,
-                      iconSize: [24, 24],
-                      iconAnchor: [12, 12],
-                    })}
+                    icon={createUserIcon()}
                   >
                     <Popup>
                       <div className="p-2">
