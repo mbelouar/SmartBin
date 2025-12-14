@@ -12,7 +12,7 @@ class BinSerializer(serializers.ModelSerializer):
             'capacity', 'fill_level', 'status', 'is_open',
             'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'is_open', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'qr_code', 'is_open', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
 
 
 class BinUsageLogSerializer(serializers.ModelSerializer):

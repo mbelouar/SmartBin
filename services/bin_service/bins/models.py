@@ -1,5 +1,7 @@
 from django.db import models
 import uuid
+import random
+import string
 
 
 class Bin(models.Model):
@@ -15,7 +17,7 @@ class Bin(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
-    qr_code = models.CharField(max_length=100, unique=True, help_text="QR code on the bin")
+    qr_code = models.CharField(max_length=100, unique=True, help_text="Auto-generated unique bin ID", blank=True)
     location = models.CharField(max_length=255)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -31,6 +33,21 @@ class Bin(models.Model):
     class Meta:
         db_table = 'bins'
         ordering = ['-created_at']
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate QR code on creation"""
+        if not self.qr_code:
+            # Generate unique QR code like SB-ABC123
+            prefix = 'SB-'
+            unique_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            self.qr_code = f"{prefix}{unique_part}"
+            
+            # Ensure uniqueness
+            while Bin.objects.filter(qr_code=self.qr_code).exists():
+                unique_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                self.qr_code = f"{prefix}{unique_part}"
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.name} ({self.location})"

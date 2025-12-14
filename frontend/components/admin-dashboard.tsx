@@ -45,7 +45,6 @@ export function AdminDashboard() {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    qr_code: "",
     location: "",
     latitude: "",
     longitude: "",
@@ -90,7 +89,6 @@ export function AdminDashboard() {
 
       const binData = {
         name: formData.name,
-        qr_code: formData.qr_code,
         location: formData.location,
         latitude: roundCoordinate(formData.latitude),
         longitude: roundCoordinate(formData.longitude),
@@ -108,7 +106,6 @@ export function AdminDashboard() {
       // Reset form
       setFormData({
         name: "",
-        qr_code: "",
         location: "",
         latitude: "",
         longitude: "",
@@ -249,17 +246,6 @@ export function AdminDashboard() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., Smart Bin #001"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="qr_code">QR Code *</Label>
-                  <Input
-                    id="qr_code"
-                    value={formData.qr_code}
-                    onChange={(e) => setFormData({ ...formData, qr_code: e.target.value })}
-                    placeholder="e.g., SB-001"
                     required
                   />
                 </div>
