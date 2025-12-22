@@ -182,7 +182,6 @@ services:
       - "1880:1880"
     volumes:
       - ./node-red/data:/data
-      - node_red_data:/data
     networks:
       - smartbin_network
     depends_on:
@@ -241,4 +240,3 @@ volumes:
   mysql_data:
   mosquitto_data:
   mosquitto_logs:
-  node_red_data:

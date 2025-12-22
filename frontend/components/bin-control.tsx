@@ -27,6 +27,16 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null)
   const [showPointsAnimation, setShowPointsAnimation] = useState(false)
 
+  // Debug: Log props when component mounts/updates
+  useEffect(() => {
+    console.log("🔍 BinControl mounted/updated")
+    console.log("   Bin:", bin.name, bin.id)
+    console.log("   User NFC Code prop:", userNfcCode)
+    console.log("   Type:", typeof userNfcCode)
+    console.log("   Is null?", userNfcCode === null)
+    console.log("   Is undefined?", userNfcCode === undefined)
+  }, [bin, userNfcCode])
+
   // Check if bin can be opened (memoized to prevent re-renders)
   const { canOpen, statusMessage } = useMemo(() => {
     if (bin.status === "full" || bin.fill_level >= 90) {
@@ -90,7 +100,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
           
           if (recentDetection) {
             clearInterval(pollInterval)
-            handleTrashDetected(recentDetection.points_awarded || 10)
+            handleTrashDetected(recentDetection.points_awarded || 5)
           }
         } catch (error) {
           console.error("Error polling for detection:", error)
@@ -108,30 +118,42 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
       return
     }
 
+    // Check if user NFC code is available before proceeding
+    if (!userNfcCode) {
+      console.error("❌ User NFC code not available. Cannot proceed with NFC.")
+      console.error("   userNfcCode state:", userNfcCode)
+      alert("Error: User NFC code not available. Please refresh the page and try again.")
+      return
+    }
+
     setWaitingForNfc(true)
     console.log("[User] Selected bin:", bin.name, bin.id)
     console.log("[User] Waiting for NFC scan from Node-RED...")
+    console.log("[User] 🔑 User NFC Code:", userNfcCode)
 
     try {
-      // Tell Node-RED which bin the user selected, including their NFC code
-      if (!userNfcCode) {
-        console.error("User NFC code not available. Cannot proceed with NFC.")
-        return
+      const payload = {
+        bin_id: bin.id,
+        bin_name: bin.name,
+        nfc_tag_id: bin.nfc_tag_id,
+        user_nfc_code: userNfcCode // Send the actual user's NFC code
       }
       
-      await fetch('http://localhost:1880/nfc/select-bin', {
+      console.log("[User] 📤 Sending to Node-RED:", payload)
+      console.log("[User] 📤 User NFC code being sent:", userNfcCode)
+      
+      const response = await fetch('http://localhost:1880/nfc/select-bin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bin_id: bin.id,
-          bin_name: bin.name,
-          nfc_tag_id: bin.nfc_tag_id,
-          user_nfc_code: userNfcCode // Send the actual user's NFC code
-        })
+        body: JSON.stringify(payload)
       })
-      console.log("[User] Sent NFC code to Node-RED:", userNfcCode)
+      
+      const result = await response.json()
+      console.log("[User] ✅ Node-RED response:", result)
+      console.log("[User] ✅ Sent NFC code to Node-RED:", userNfcCode)
     } catch (error) {
       console.error("Error selecting bin:", error)
+      setWaitingForNfc(false)
     }
   }
 
@@ -197,7 +219,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
     }
   }
 
-  const handleTrashDetected = (points: number = 10) => {
+  const handleTrashDetected = (points: number = 5) => {
     setIsDetecting(true)
     
     // Wait 2 seconds before showing points animation

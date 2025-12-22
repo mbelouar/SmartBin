@@ -34,22 +34,22 @@ class MaterialDetection(models.Model):
     def award_points(self):
         """
         Award points to user via Auth Service
+        Always awards 5 points per trash deposit regardless of material type
         Returns True if successful, False otherwise
         """
         if self.points_added_to_user:
             return True  # Already awarded
         
         from .utils import add_points_to_user
-        from django.conf import settings
         
-        # Get points for this material type
-        points = settings.POINTS_CONFIG.get(self.material_type, 5)
+        # Always award 5 points per trash deposit
+        points = 5
         
         # Add points via Auth Service
         success = add_points_to_user(
             user_nfc_code=self.user_nfc_code,
             points=points,
-            description=f"Detected {self.material_type} waste"
+            description=f"Trash deposit - {self.material_type} waste"
         )
         
         if success:

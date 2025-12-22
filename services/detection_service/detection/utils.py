@@ -22,6 +22,7 @@ def add_points_to_user(user_nfc_code, points, description=""):
     """
     try:
         logger.info(f"💰 Attempting to add {points} points to user with NFC code: {user_nfc_code}")
+        logger.info(f"   Type of user_nfc_code: {type(user_nfc_code)}")
         
         # Call Auth Service to add points
         # The auth service can accept either user_id (UUID) or NFC code
@@ -45,21 +46,29 @@ def add_points_to_user(user_nfc_code, points, description=""):
         response = requests.post(url, json=payload, timeout=10)
         
         logger.info(f"📨 Response status: {response.status_code}")
+        logger.info(f"📨 Response headers: {dict(response.headers)}")
         
         if response.status_code == 200:
-            logger.info(f"✅ Successfully added {points} points to user {user_nfc_code}")
-            return True
+            try:
+                response_data = response.json()
+                logger.info(f"✅ Successfully added {points} points to user {user_nfc_code}")
+                logger.info(f"   Response data: {response_data}")
+                return True
+            except:
+                logger.info(f"✅ Successfully added {points} points to user {user_nfc_code} (no JSON response)")
+                return True
         else:
             logger.error(f"❌ Failed to add points. Status: {response.status_code}")
             try:
                 error_data = response.json()
-                logger.error(f"   Error response: {error_data}")
+                logger.error(f"   Error response (JSON): {error_data}")
             except:
-                logger.error(f"   Error response text: {response.text}")
+                logger.error(f"   Error response (text): {response.text}")
             return False
     
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Network error calling Auth Service: {e}")
+        logger.error(f"   Auth Service URL: {settings.AUTH_SERVICE_URL}")
         import traceback
         traceback.print_exc()
         return False

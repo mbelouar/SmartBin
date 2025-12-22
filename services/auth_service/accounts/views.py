@@ -108,11 +108,19 @@ class AddPointsView(APIView):
     permission_classes = [permissions.AllowAny]  # Allow microservice-to-microservice communication
     
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"💰 AddPointsView received request")
+        logger.info(f"   Request data: {request.data}")
+        
         serializer = AddPointsSerializer(data=request.data)
         if serializer.is_valid():
             user_id = serializer.validated_data['user_id']
             amount = serializer.validated_data['amount']
             description = serializer.validated_data.get('description', 'Points earned')
+            
+            logger.info(f"   Validated - user_id: {user_id}, amount: {amount}, description: {description}")
             
             try:
                 user = None
@@ -122,20 +130,27 @@ class AddPointsView(APIView):
                     import uuid
                     uuid.UUID(str(user_id))
                     # It's a valid UUID, try to find by ID
+                    logger.info(f"   Trying to find user by UUID: {user_id}")
                     try:
                         user = User.objects.get(id=user_id)
+                        logger.info(f"   ✅ Found user by UUID: {user.username}")
                     except User.DoesNotExist:
+                        logger.info(f"   ❌ User not found by UUID")
                         pass
                 except (ValueError, AttributeError, TypeError):
                     # Not a UUID, skip ID lookup
+                    logger.info(f"   Not a valid UUID, skipping UUID lookup")
                     pass
                 
                 # If not found by UUID, try NFC code
                 if not user:
                     nfc_code = user_id if user_id.startswith('SB-') else f"SB-{user_id}"
+                    logger.info(f"   Trying to find user by NFC code: {nfc_code}")
                     try:
                         user = User.objects.get(nfc_code=nfc_code)
+                        logger.info(f"   ✅ Found user by NFC code: {user.username}")
                     except User.DoesNotExist:
+                        logger.info(f"   ❌ User not found by NFC code")
                         pass
                 
                 # If still not found, try username
@@ -144,26 +159,38 @@ class AddPointsView(APIView):
                     username_to_try = user_id
                     if username_to_try.startswith('SB-'):
                         username_to_try = username_to_try[3:]  # Remove "SB-" prefix
+                    logger.info(f"   Trying to find user by username: {username_to_try}")
                     try:
                         user = User.objects.get(username=username_to_try)
+                        logger.info(f"   ✅ Found user by username: {user.username}")
                     except User.DoesNotExist:
+                        logger.info(f"   ❌ User not found by username")
                         pass
                 
                 # If still not found, return error
                 if not user:
+                    logger.error(f"❌ User not found after all lookup attempts: {user_id}")
+                    # Log all users in database for debugging
+                    all_users = User.objects.all().values_list('id', 'username', 'nfc_code', 'clerk_id')
+                    logger.error(f"   Available users in database:")
+                    for u in all_users:
+                        logger.error(f"     - ID: {u[0]}, Username: {u[1]}, NFC: {u[2]}, Clerk: {u[3]}")
                     return Response({
                         'error': f'User not found: {user_id} (tried UUID, NFC code, and username)'
                     }, status=status.HTTP_404_NOT_FOUND)
                 
+                logger.info(f"   Adding {amount} points to user {user.username} (current: {user.points})")
                 user.add_points(amount)
+                logger.info(f"   ✅ Points added! New balance: {user.points}")
                 
                 # Log the transaction
-                PointsHistory.objects.create(
+                history = PointsHistory.objects.create(
                     user=user,
                     amount=amount,
                     transaction_type='earned',
                     description=description
                 )
+                logger.info(f"   ✅ Points history created: {history.id}")
                 
                 return Response({
                     'message': 'Points added successfully',
@@ -173,11 +200,13 @@ class AddPointsView(APIView):
                 }, status=status.HTTP_200_OK)
             except Exception as e:
                 import traceback
+                logger.error(f"❌ Exception in AddPointsView: {e}")
                 traceback.print_exc()
                 return Response({
                     'error': f'Error adding points: {str(e)}'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+        logger.error(f"❌ Serializer validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

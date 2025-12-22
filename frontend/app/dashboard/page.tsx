@@ -46,11 +46,16 @@ export default function DashboardPage() {
       try {
         setLoadingPoints(true)
         // Get user by Clerk ID
+        console.log("🔍 Fetching user data for Clerk ID:", user.id)
         const userData = await authApi.getUserByClerkId(user.id)
+        console.log("✅ User data fetched:", userData)
+        console.log("🔑 User NFC Code:", userData.nfc_code)
+        console.log("💰 User Points:", userData.points)
         setPoints(userData.points || 5) // Default to 5 if points is null
         setUserNfcCode(userData.nfc_code || null) // Store NFC code for Node-RED
+        console.log("✅ State updated - userNfcCode:", userData.nfc_code)
       } catch (error: any) {
-        console.error("Failed to fetch user data:", error)
+        console.error("❌ Failed to fetch user data:", error)
         // Fallback to localStorage if API fails
         const savedPoints = localStorage.getItem("smartbin_points")
         if (savedPoints) {
