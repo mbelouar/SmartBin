@@ -50,9 +50,10 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_auth
     environment:
-      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/auth_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
+      - CLERK_SECRET_KEY=sk_test_SsMW9j9gVmBDdDidssxbmV82lERokmG4Gki44sKZNi
     ports:
       - "8001:8000"
     depends_on:
@@ -63,7 +64,7 @@ services:
     volumes:
       - ./services/auth_service:/app
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 
   # Bin Service
@@ -73,11 +74,12 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_bin_service
     environment:
-      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/bin_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
+      - CLERK_SECRET_KEY=sk_test_SsMW9j9gVmBDdDidssxbmV82lERokmG4Gki44sKZNi
     ports:
       - "8002:8000"
     depends_on:
@@ -90,7 +92,7 @@ services:
     volumes:
       - ./services/bin_service:/app
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 
   # Detection Service
@@ -100,12 +102,12 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_detection
     environment:
-      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/detection_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
-      - AUTH_SERVICE_URL=http://auth_service:8000
+      - AUTH_SERVICE_URL=http://gateway:8000
     ports:
       - "8003:8000"
     depends_on:
@@ -126,7 +128,7 @@ services:
       dockerfile: Dockerfile
     container_name: smartbin_reclamation
     environment:
-      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/smartbin_db
+      - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/reclamation_db
       - SECRET_KEY=your-secret-key-change-in-production
       - DEBUG=True
     ports:
@@ -139,7 +141,7 @@ services:
     volumes:
       - ./services/reclamation_service:/app
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 
   # API Gateway

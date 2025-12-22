@@ -8,7 +8,7 @@ class ReclamationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reclamation
         fields = [
-            'id', 'user_qr_code', 'bin_id', 'reclamation_type', 'title', 'message',
+            'id', 'user_nfc_code', 'bin_id', 'reclamation_type', 'title', 'message',
             'location', 'latitude', 'longitude', 'status', 'priority',
             'admin_notes', 'resolved_at', 'created_at', 'updated_at'
         ]
@@ -16,11 +16,11 @@ class ReclamationSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         """Validate reclamation data"""
-        # Ensure user_qr_code starts with SB-
-        user_qr = data.get('user_qr_code', '')
-        if user_qr and not user_qr.startswith('SB-'):
+        # Ensure user_nfc_code starts with SB-
+        user_nfc = data.get('user_nfc_code', '')
+        if user_nfc and not user_nfc.startswith('SB-'):
             raise serializers.ValidationError({
-                'user_qr_code': "Invalid QR code format. Must start with 'SB-'"
+                'user_nfc_code': "Invalid NFC code format. Must start with 'SB-'"
             })
         return data
 
@@ -31,14 +31,14 @@ class ReclamationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reclamation
         fields = [
-            'user_qr_code', 'bin_id', 'reclamation_type', 'title', 'message',
+            'user_nfc_code', 'bin_id', 'reclamation_type', 'title', 'message',
             'location', 'latitude', 'longitude', 'priority'
         ]
     
-    def validate_user_qr_code(self, value):
-        """Validate QR code format"""
+    def validate_user_nfc_code(self, value):
+        """Validate NFC code format"""
         if not value.startswith('SB-'):
-            raise serializers.ValidationError("Invalid QR code format. Must start with 'SB-'")
+            raise serializers.ValidationError("Invalid NFC code format. Must start with 'SB-'")
         return value
 
 

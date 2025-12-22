@@ -62,14 +62,14 @@ class BinMQTTClient:
         self.client.disconnect()
         self.connected = False
     
-    def publish_bin_command(self, bin_id, command, user_qr_code=None):
+    def publish_bin_command(self, bin_id, command, user_nfc_code=None):
         """
         Publish bin command to MQTT
         
         Args:
             bin_id: UUID of the bin
             command: 'open' or 'close'
-            user_qr_code: QR code of user (for open command)
+            user_nfc_code: NFC code of user (for open command)
         """
         topic = f"bin/{bin_id}/{command}"
         
@@ -79,8 +79,8 @@ class BinMQTTClient:
             "timestamp": None  # Will be set by MQTT
         }
         
-        if user_qr_code and command == 'open':
-            payload["user_qr_code"] = user_qr_code
+        if user_nfc_code and command == 'open':
+            payload["user_nfc_code"] = user_nfc_code
         
         try:
             if not self.connected:
@@ -103,9 +103,9 @@ class BinMQTTClient:
             logger.error(f"Error publishing to MQTT: {e}")
             return False
     
-    def open_bin(self, bin_id, user_qr_code):
+    def open_bin(self, bin_id, user_nfc_code):
         """Publish open command for bin"""
-        return self.publish_bin_command(bin_id, 'open', user_qr_code)
+        return self.publish_bin_command(bin_id, 'open', user_nfc_code)
     
     def close_bin(self, bin_id):
         """Publish close command for bin"""

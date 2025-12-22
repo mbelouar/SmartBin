@@ -5,14 +5,14 @@ from .models import User, PointsHistory
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['username', 'email', 'points', 'qr_code', 'is_staff', 'created_at']
+    list_display = ['username', 'email', 'points', 'nfc_code', 'is_staff', 'created_at']
     list_filter = ['is_staff', 'is_superuser', 'is_active', 'created_at']
-    search_fields = ['username', 'email', 'qr_code']
+    search_fields = ['username', 'email', 'nfc_code']
     ordering = ['-created_at']
     
     fieldsets = BaseUserAdmin.fieldsets + (
         ('SmartBin Info', {
-            'fields': ('points', 'qr_code', 'phone_number')
+            'fields': ('points', 'nfc_code', 'phone_number')
         }),
     )
     

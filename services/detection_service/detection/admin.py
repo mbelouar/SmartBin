@@ -4,15 +4,15 @@ from .models import MaterialDetection, DetectionStats
 
 @admin.register(MaterialDetection)
 class MaterialDetectionAdmin(admin.ModelAdmin):
-    list_display = ['material_type', 'user_qr_code', 'bin_id', 'points_awarded', 'points_added_to_user', 'created_at']
+    list_display = ['material_type', 'user_nfc_code', 'bin_id', 'points_awarded', 'points_added_to_user', 'created_at']
     list_filter = ['material_type', 'points_added_to_user', 'created_at']
-    search_fields = ['user_qr_code', 'bin_id']
+    search_fields = ['user_nfc_code', 'bin_id']
     readonly_fields = ['id', 'created_at', 'points_awarded', 'points_added_to_user']
     ordering = ['-created_at']
     
     fieldsets = (
         ('Detection Info', {
-            'fields': ('id', 'bin_id', 'user_qr_code', 'material_type', 'confidence')
+            'fields': ('id', 'bin_id', 'user_nfc_code', 'material_type', 'confidence')
         }),
         ('Points', {
             'fields': ('points_awarded', 'points_added_to_user')

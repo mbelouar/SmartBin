@@ -10,13 +10,20 @@ class User(AbstractUser):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
-    points = models.IntegerField(default=0, help_text="Points earned from proper waste disposal")
-    qr_code = models.CharField(
+    clerk_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Clerk authentication ID for hybrid auth support"
+    )
+    points = models.IntegerField(default=5, help_text="Points earned from proper waste disposal (new users start with 5 points)")
+    nfc_code = models.CharField(
         max_length=100, 
         blank=True, 
         null=True, 
         unique=True,
-        help_text="Unique QR code identifier for the user"
+        help_text="Unique NFC code identifier for the user"
     )
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -45,12 +52,15 @@ class User(AbstractUser):
             return True
         return False
     
-    def generate_qr_code(self):
-        """Generate unique QR code for user if not exists"""
-        if not self.qr_code:
-            self.qr_code = f"SB-{self.id}"
-            self.save(update_fields=['qr_code', 'updated_at'])
-        return self.qr_code
+    def generate_nfc_code(self):
+        """Generate unique NFC code for user if not exists"""
+        if not self.nfc_code:
+            self.nfc_code = f"SB-{self.id}"
+            # Ensure new users start with 5 points if they have 0
+            if self.points == 0:
+                self.points = 5
+            self.save(update_fields=['nfc_code', 'points', 'updated_at'])
+        return self.nfc_code
 
 
 class PointsHistory(models.Model):

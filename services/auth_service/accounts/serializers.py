@@ -10,8 +10,8 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'points', 'qr_code', 'phone_number', 'created_at', 'is_staff', 'is_superuser']
-        read_only_fields = ['id', 'points', 'qr_code', 'created_at', 'is_staff', 'is_superuser']
+        fields = ['id', 'username', 'email', 'points', 'nfc_code', 'phone_number', 'created_at', 'is_staff', 'is_superuser']
+        read_only_fields = ['id', 'points', 'nfc_code', 'created_at', 'is_staff', 'is_superuser']
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -51,8 +51,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             **validated_data
         )
         
-        # Generate QR code for user
-        user.generate_qr_code()
+        # Ensure new user starts with 5 points
+        if user.points == 0:
+            user.points = 5
+            user.save(update_fields=['points', 'updated_at'])
+        
+        # Generate NFC code for user
+        user.generate_nfc_code()
         
         return user
 
@@ -75,14 +80,12 @@ class PointsHistorySerializer(serializers.ModelSerializer):
 
 class AddPointsSerializer(serializers.Serializer):
     """Serializer for adding points to user"""
-    user_id = serializers.UUIDField()
+    user_id = serializers.CharField(help_text="User ID (UUID), NFC code (SB-...), or username")
     amount = serializers.IntegerField(min_value=1)
     description = serializers.CharField(required=False, allow_blank=True)
     
     def validate_user_id(self, value):
-        """Validate user exists"""
-        try:
-            User.objects.get(id=value)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("User not found")
+        """Validate user exists - accepts UUID, NFC code, or username"""
+        # Don't validate here - let the view handle all lookups
+        # This allows flexibility for NFC codes and usernames
         return value

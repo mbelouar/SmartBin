@@ -4,14 +4,14 @@ from .models import Reclamation
 
 @admin.register(Reclamation)
 class ReclamationAdmin(admin.ModelAdmin):
-    list_display = ['title', 'reclamation_type', 'user_qr_code', 'status', 'priority', 'created_at']
+    list_display = ['title', 'reclamation_type', 'user_nfc_code', 'status', 'priority', 'created_at']
     list_filter = ['status', 'priority', 'reclamation_type', 'created_at']
-    search_fields = ['title', 'message', 'user_qr_code']
+    search_fields = ['title', 'message', 'user_nfc_code']
     readonly_fields = ['id', 'created_at', 'updated_at', 'resolved_at']
     
     fieldsets = (
         ('Basic Info', {
-            'fields': ('id', 'user_qr_code', 'bin_id', 'reclamation_type', 'title', 'message')
+            'fields': ('id', 'user_nfc_code', 'bin_id', 'reclamation_type', 'title', 'message')
         }),
         ('Location', {
             'fields': ('location', 'latitude', 'longitude')

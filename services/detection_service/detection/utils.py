@@ -8,12 +8,12 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def add_points_to_user(user_qr_code, points, description=""):
+def add_points_to_user(user_nfc_code, points, description=""):
     """
     Add points to user via Auth Service API
     
     Args:
-        user_qr_code: User's QR code (e.g., "SB-uuid")
+        user_nfc_code: User's NFC code (e.g., "SB-user-001" or "SB-{uuid}")
         points: Points to add
         description: Description of the transaction
     
@@ -21,48 +21,65 @@ def add_points_to_user(user_qr_code, points, description=""):
         bool: True if successful, False otherwise
     """
     try:
-        # Extract user_id from QR code (format: SB-{user_id})
-        if user_qr_code.startswith('SB-'):
-            user_id = user_qr_code[3:]  # Remove "SB-" prefix
-        else:
-            logger.error(f"Invalid QR code format: {user_qr_code}")
-            return False
+        logger.info(f"💰 Attempting to add {points} points to user with NFC code: {user_nfc_code}")
         
         # Call Auth Service to add points
+        # The auth service can accept either user_id (UUID) or NFC code
         url = f"{settings.AUTH_SERVICE_URL}/api/auth/points/add/"
+        
+        # Send the full NFC code - auth service can handle UUID, NFC code, or username
+        # The auth service will try: UUID -> NFC code -> username
+        user_identifier = user_nfc_code
+        
+        logger.info(f"📝 Using user identifier: {user_identifier} (NFC code: {user_nfc_code})")
+        
         payload = {
-            "user_id": user_id,
+            "user_id": user_identifier,  # Can be UUID, NFC code (SB-...), or username
             "amount": points,
             "description": description
         }
         
-        response = requests.post(url, json=payload, timeout=5)
+        logger.info(f"🌐 Calling Auth Service: {url}")
+        logger.info(f"📦 Payload: {payload}")
+        
+        response = requests.post(url, json=payload, timeout=10)
+        
+        logger.info(f"📨 Response status: {response.status_code}")
         
         if response.status_code == 200:
-            logger.info(f"Added {points} points to user {user_qr_code}")
+            logger.info(f"✅ Successfully added {points} points to user {user_nfc_code}")
             return True
         else:
-            logger.error(f"Failed to add points. Status: {response.status_code}, Response: {response.text}")
+            logger.error(f"❌ Failed to add points. Status: {response.status_code}")
+            try:
+                error_data = response.json()
+                logger.error(f"   Error response: {error_data}")
+            except:
+                logger.error(f"   Error response text: {response.text}")
             return False
     
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error calling Auth Service: {e}")
+        logger.error(f"❌ Network error calling Auth Service: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     except Exception as e:
-        logger.error(f"Unexpected error adding points: {e}")
+        logger.error(f"❌ Unexpected error adding points: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
-def get_user_by_qr_code(user_qr_code):
+def get_user_by_nfc_code(user_nfc_code):
     """
-    Get user info from Auth Service by QR code
+    Get user info from Auth Service by NFC code
     
     Returns:
         dict: User data or None
     """
     try:
-        if user_qr_code.startswith('SB-'):
-            user_id = user_qr_code[3:]
+        if user_nfc_code.startswith('SB-'):
+            user_id = user_nfc_code[3:]
         else:
             return None
         

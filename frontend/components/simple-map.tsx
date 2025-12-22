@@ -28,6 +28,7 @@ interface SimpleMapProps {
   userLocation?: { lat: number; lng: number }
   isModalOpen?: boolean
   mapLayer?: MapLayer
+  adminMode?: boolean
 }
 
 // Helper to parse coordinate (handles both string and number)
@@ -207,6 +208,7 @@ export function SimpleMap({
   userLocation,
   isModalOpen = false,
   mapLayer = "osm",
+  adminMode = false,
 }: SimpleMapProps) {
   const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -700,21 +702,21 @@ export function SimpleMap({
                                       </div>
                                     </div>
 
-                                    <Button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        if (onUseBin) {
-                                          onUseBin(bin)
-                                        } else {
-                                          onBinClick(bin)
-                                        }
-                                      }}
-                                      className="w-full gap-2 bg-gradient-eco hover:scale-[1.02] hover:shadow-lg transition-all duration-200 text-xs font-semibold"
-                                      size="sm"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Use This Bin
-                                    </Button>
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onUseBin) {
+                  onUseBin(bin)
+                } else {
+                  onBinClick(bin)
+                }
+              }}
+              className="w-full gap-2 bg-gradient-eco hover:scale-[1.02] hover:shadow-lg transition-all duration-200 text-xs font-semibold"
+              size="sm"
+            >
+              <Trash2 className="w-3 h-3" />
+              {adminMode ? "View Info" : "Use This Bin"}
+            </Button>
                                   </div>
                                 </motion.div>
                               )}

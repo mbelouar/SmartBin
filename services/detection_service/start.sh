@@ -2,7 +2,7 @@
 set -e
 
 echo "Running migrations..."
-python manage.py migrate
+python manage.py migrate --fake-initial || python manage.py migrate
 
 echo "Starting MQTT client in background..."
 PYTHONPATH=/app python mqtt/mqtt_client.py &

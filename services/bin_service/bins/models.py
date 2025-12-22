@@ -93,7 +93,7 @@ class BinUsageLog(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bin = models.ForeignKey(Bin, on_delete=models.CASCADE, related_name='usage_logs')
-    user_qr_code = models.CharField(max_length=100, help_text="User's QR code who used the bin")
+    user_nfc_code = models.CharField(max_length=100, help_text="User's NFC code who used the bin")
     opened_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     detection_completed = models.BooleanField(default=False)
@@ -103,7 +103,7 @@ class BinUsageLog(models.Model):
         ordering = ['-opened_at']
     
     def __str__(self):
-        return f"{self.bin.name} - {self.user_qr_code} - {self.opened_at}"
+        return f"{self.bin.name} - {self.user_nfc_code} - {self.opened_at}"
     
     def complete_usage(self):
         """Mark usage as completed with detection"""

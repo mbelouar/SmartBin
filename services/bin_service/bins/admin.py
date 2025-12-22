@@ -24,8 +24,8 @@ class BinAdmin(admin.ModelAdmin):
 
 @admin.register(BinUsageLog)
 class BinUsageLogAdmin(admin.ModelAdmin):
-    list_display = ['bin', 'user_qr_code', 'opened_at', 'closed_at', 'detection_completed']
+    list_display = ['bin', 'user_nfc_code', 'opened_at', 'closed_at', 'detection_completed']
     list_filter = ['detection_completed', 'opened_at']
-    search_fields = ['bin__name', 'user_qr_code']
+    search_fields = ['bin__name', 'user_nfc_code']
     readonly_fields = ['id', 'opened_at']
     ordering = ['-opened_at']

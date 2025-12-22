@@ -19,49 +19,77 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
 media/
 staticfiles/
+collectstatic/
 
-# Environment
+# Environment Variables (IMPORTANT: Never commit these!)
 .env
+.env.local
+.env.*.local
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+*.env
 
-# IDE
+# IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
 
 # Docker
 *.pid
 *.seed
 *.pid.lock
+docker-compose.override.yml
+.dockerignore
+
+# Docker Volumes & Data
+mysql_data/
+postgres_data/
+mosquitto_data/
+mosquitto_logs/
+node_red_data/
+*.data/
 
 # Database
 *.sql
-postgres_data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
 
 # MQTT
 mosquitto_data/
 mosquitto_logs/
+infrastructure/mosquitto/passwords.txt
 
 # Node-RED
 node-red/data/node_modules/
 node-red/data/.config.json
 node-red/data/.sessions.json
+node-red/data/lib/
+node-red/data/.node-red/
 
 # Next.js Frontend
 frontend/.next/
@@ -71,25 +99,119 @@ frontend/.pnpm-store/
 frontend/node_modules/
 frontend/.env*.local
 frontend/next-env.d.ts
+frontend/.vercel
+frontend/.swc/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-store/
 
 # Logs
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.log.*
+log/
 
 # Testing
 .coverage
+.coverage.*
 htmlcov/
 .pytest_cache/
 .tox/
+.hypothesis/
+test-results/
+coverage/
+*.cover
+*.coveragerc
 
 # Backup files
 *.bak
 *.backup
 *~
+*.tmp
+*.temp
 
 # Compiled files
 *.pyc
 *.pyo
+*.pyd
+*.so
+*.dylib
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+
+# Test credentials and sensitive files
+TEST_CREDENTIALS.txt
+*_credentials.txt
+*_secrets.txt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Scripts (keep .sh files but ignore temporary test scripts)
+test_*.sh
+*_test.sh
+
+# Documentation build
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython
+cython_debug/

@@ -31,7 +31,8 @@ def proxy_request(request, service_url, path=''):
         # Prepare headers (minimal headers to avoid Django ALLOWED_HOSTS issues)
         headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Host': 'localhost'  # Override Host header to avoid Django ALLOWED_HOSTS validation
         }
         
         # Only forward Authorization header

@@ -9,7 +9,8 @@ from apps.views import (
     AuthProxyView,
     BinProxyView,
     DetectionProxyView,
-    ReclamationProxyView
+    ReclamationProxyView,
+    DetectionStreamView
 )
 
 urlpatterns = [
@@ -29,4 +30,7 @@ urlpatterns = [
     
     # Proxy to Reclamation Service
     re_path(r'^api/reclamations/(?P<path>.*)$', ReclamationProxyView.as_view(), name='reclamation-proxy'),
+    
+    # Real-time detection stream (SSE)
+    path('api/stream/detections/', DetectionStreamView.as_view(), name='detection-stream'),
 ]

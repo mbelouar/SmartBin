@@ -10,34 +10,137 @@
         "usetls": false,
         "protocolVersion": "4",
         "keepalive": "60",
-        "cleansession": true,
-        "birthTopic": "",
-        "birthQos": "0",
-        "birthPayload": "",
-        "birthMsg": {},
-        "closeTopic": "",
-        "closeQos": "0",
-        "closePayload": "",
-        "closeMsg": {},
-        "willTopic": "",
-        "willQos": "0",
-        "willPayload": "",
-        "willMsg": {},
-        "userProps": "",
-        "sessionExpiry": ""
+        "cleansession": true
     },
     {
         "id": "tab_main",
         "type": "tab",
-        "label": "SmartBin Trash Detection",
+        "label": "\ud83d\uddd1\ufe0f SmartBin IoT Simulator",
         "disabled": false,
-        "info": "Simple flow to simulate trash detection"
+        "info": "## SmartBin Complete Flow Simulator\n\n### Instructions:\n1. In the web app, login and select a bin\n2. Click 'Use NFC' button in the app\n3. Click the blue 'Simulate NFC Tap' button here\n4. Bin will open automatically\n5. Click the green 'Simulate Trash Deposit' button\n6. Points will be awarded automatically!\n\n### Watch the flow:\n- Status messages show current state\n- Debug panel shows all MQTT messages\n- Check bin service logs for confirmations"
     },
     {
-        "id": "inject_detect_trash",
+        "id": "comment_instructions",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\ud83d\udccb INSTRUCTIONS: 1) App: Login & Select Bin \u2192 2) App: Click 'Use NFC' \u2192 3) HERE: Click 'Simulate NFC Tap' \u2192 4) Wait for bin to open \u2192 5) HERE: Click 'Simulate Trash Deposit'",
+        "info": "",
+        "x": 620,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "comment_section1",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STEP 1: BIN SELECTION (Automatic from App) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 360,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "comment_section1",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STEP 1: BIN SELECTION (Automatic from App) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 360,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "http_select_bin",
+        "type": "http in",
+        "z": "tab_main",
+        "name": "POST /nfc/select-bin",
+        "url": "/nfc/select-bin",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 160,
+        "wires": [
+            [
+                "function_store_selected_bin"
+            ]
+        ]
+    },
+    {
+        "id": "function_store_selected_bin",
+        "type": "function",
+        "z": "tab_main",
+        "name": "\u2705 Store Selected Bin",
+        "func": "const binData = msg.payload;\n\n// Debug: Log what we received\nnode.warn(`\ud83d\udd0d DEBUG: Received bin selection data:`);\nnode.warn(`   bin_id: ${binData.bin_id}`);\nnode.warn(`   bin_name: ${binData.bin_name}`);\nnode.warn(`   user_nfc_code from frontend: ${binData.user_nfc_code || 'NOT PROVIDED'}`);\nnode.warn(`   user_qr_code from frontend: ${binData.user_qr_code || 'NOT PROVIDED'}`);\n\n// CRITICAL: Only use user_nfc_code, NO fallback to user_qr_code\nif (!binData.user_nfc_code) {\n    node.error(`\u274c ERROR: Frontend did not send user_nfc_code! Cannot proceed.`);\n    node.status({fill:'red', shape:'ring', text:'Missing user_nfc_code'});\n    msg.payload = {success: false, error: 'Missing user_nfc_code'};\n    msg.statusCode = 400;\n    return msg;\n}\n\n\n// Debug: Log what we received\nnode.warn(`\ud83d\udd0d DEBUG: Received bin selection data:`);\nnode.warn(`   bin_id: ${binData.bin_id}`);\nnode.warn(`   user_nfc_code from frontend: ${binData.user_nfc_code || 'NOT PROVIDED'}`);\nnode.warn(`   user_qr_code from frontend: ${binData.user_qr_code || 'NOT PROVIDED'}`);\n\nif (!binData.user_nfc_code) {\n    node.error(`\u274c ERROR: Frontend did not send user_nfc_code! Cannot proceed.`);\n    node.status({fill:'red', shape:'ring', text:'Missing user_nfc_code'});\n}\n\n// Debug: Log what we received\nnode.warn(`\ud83d\udd0d DEBUG: Received bin selection data:`);\nnode.warn(`   bin_id: ${binData.bin_id}`);\nnode.warn(`   user_nfc_code: ${binData.user_nfc_code || 'undefined'}`);\nnode.warn(`   user_qr_code: ${binData.user_qr_code || 'undefined'}`);\n\n// Store the bin user selected in the app\n// Store with debug\nconst storedData = {\n    bin_id: binData.bin_id,\n    bin_name: binData.bin_name,\n    nfc_tag_id: binData.nfc_tag_id,\n    user_nfc_code: binData.user_nfc_code || null,  // Only use user_nfc_code, no fallback\n    selected_at: new Date().toISOString()\n};\nnode.warn(`\ud83d\udd0d DEBUG: Storing in selectedBin:`);\nnode.warn(`   user_nfc_code: ${storedData.user_nfc_code || 'undefined'}`);\n// Store the bin data - ONLY use user_nfc_code from frontend\nflow.set('selectedBin', {\n    bin_id: binData.bin_id,\n    bin_name: binData.bin_name,\n    nfc_tag_id: binData.nfc_tag_id,\n    user_nfc_code: binData.user_nfc_code,  // ONLY use this, no fallback\n    selected_at: new Date().toISOString()\n});\n\nnode.warn(`\ud83c\udfaf User selected bin: ${binData.bin_name} (${binData.bin_id})`);\nnode.warn(`\ud83d\udcf1 Waiting for NFC tap... Click the blue button below!`);\n\nmsg.payload = {\n    success: true,\n    message: `Bin selected: ${binData.bin_name}. Click 'Simulate NFC Tap' button.`\n};\nmsg.statusCode = 200;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 160,
+        "wires": [
+            [
+                "http_response_select",
+                "debug_bin_selection"
+            ]
+        ]
+    },
+    {
+        "id": "http_response_select",
+        "type": "http response",
+        "z": "tab_main",
+        "name": "Return Success",
+        "statusCode": "",
+        "headers": {
+            "Access-Control-Allow-Origin": "*"
+        },
+        "x": 660,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "debug_bin_selection",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "Bin Selection",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 670,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "comment_section2",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STEP 2: NFC TAP SIMULATION (Click Blue Button) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 380,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "comment_section2",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STEP 2: NFC TAP SIMULATION (Click Blue Button) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 380,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "inject_nfc_tap",
         "type": "inject",
         "z": "tab_main",
-        "name": "Detect Trash",
+        "name": "\ud83d\udd35 Simulate: User Taps NFC",
         "props": [
             {
                 "p": "payload"
@@ -50,8 +153,216 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 150,
-        "y": 100,
+        "x": 170,
+        "y": 300,
+        "wires": [
+            [
+                "function_nfc_scan"
+            ]
+        ]
+    },
+    {
+        "id": "function_nfc_scan",
+        "type": "function",
+        "z": "tab_main",
+        "name": "\ud83d\udd10 Verify NFC & Call API",
+        "func": "// Get the bin user selected in the app\nconst selectedBin = flow.get('selectedBin');\n\nif (!selectedBin) {\n    node.error('\u274c No bin selected! User must click \"Use NFC\" in the app first.');\n    node.status({fill:'red', shape:'ring', text:'No bin selected - use app first'});\n    node.warn('\u26a0\ufe0f  ERROR: No bin selected. Please:');\n    node.warn('   1. Go to web app (http://localhost:3000)');\n    node.warn('   2. Login and select a bin');\n    node.warn('   3. Click \"Use NFC\" button');\n    node.warn('   4. Then come back here and click this button');\n    return null;\n}\n\nnode.warn(`\ud83d\udcf1 NFC Tap Detected!`);\nnode.warn(`   Bin: ${selectedBin.bin_name}`);\nnode.warn(`   NFC Tag: ${selectedBin.nfc_tag_id}`);\n\n// Simulate: User taps their phone on the bin's NFC tag\n// In real life, phone reads the NFC chip on the bin\nconst scannedNfcTag = selectedBin.nfc_tag_id;\n\n// Verify: Does scanned NFC match the selected bin?\nif (scannedNfcTag === selectedBin.nfc_tag_id) {\n    // SUCCESS: User is near the correct bin!\n    node.warn(`\u2705 NFC VERIFIED! User is physically near the bin.`);\n    \n    const scanResult = {\n        success: true,\n        verified: true,\n        bin_id: selectedBin.bin_id,\n        bin_name: selectedBin.bin_name,\n        nfc_tag_id: scannedNfcTag,\n        scanned_at: new Date().toISOString()\n    };\n    \n    flow.set('nfcScanResult', scanResult);\n    \n    node.status({\n        fill: 'green',\n        shape: 'dot',\n        text: `\u2713 NFC OK - Opening bin...`\n    });\n    \n    // Get user info\n    const userNfcCode = selectedBin.user_nfc_code || selectedBin.user_qr_code || 'SB-user-001';\n    \n    node.warn(`\ud83d\udce1 Calling Bin Service API to open bin...`);\n    \n    // Call backend API to open bin\n    msg.url = `http://gateway:8000/api/bins/list/${selectedBin.bin_id}/open/`;\n    msg.method = 'POST';\n    msg.headers = {\n        'Content-Type': 'application/json'\n    };\n    msg.payload = {\n        user_nfc_code: userNfcCode,\n        nfc_tag_id: scannedNfcTag\n    };\n    \n    return msg;\n} else {\n    // FAIL: Wrong bin!\n    node.error('\u274c NFC verification failed! User is near wrong bin.');\n    node.status({fill:'red', shape:'ring', text:'Wrong bin!'});\n    node.warn('\u26a0\ufe0f  SECURITY ALERT: NFC tag mismatch!');\n    return null;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 300,
+        "wires": [
+            [
+                "http_request_open_bin"
+            ]
+        ]
+    },
+    {
+        "id": "http_request_open_bin",
+        "type": "http request",
+        "z": "tab_main",
+        "name": "POST Open Bin API",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 680,
+        "y": 300,
+        "wires": [
+            [
+                "function_store_opened",
+                "debug_open_response"
+            ]
+        ]
+    },
+    {
+        "id": "function_store_opened",
+        "type": "function",
+        "z": "tab_main",
+        "name": "\u2705 Store Opened Bin State",
+        "func": "// Store opened bin info for trash detection\nconst selectedBin = flow.get('selectedBin');\n\nif (msg.statusCode === 200 || msg.statusCode === 201) {\n    const userNfcCode = selectedBin?.user_nfc_code;\n\n// Debug logging\nnode.warn(`\ud83d\udd0d DEBUG: Storing lastOpenedBin:`);\nnode.warn(`   selectedBin.user_nfc_code: ${selectedBin?.user_nfc_code || 'undefined'}`);\nnode.warn(`   Using userNfcCode: ${userNfcCode || 'undefined'}`);\n\nif (!userNfcCode) {\n    node.error(`\u274c ERROR: No user_nfc_code in selectedBin! Cannot proceed.`);\n    node.status({fill:'red', shape:'ring', text:'Missing user_nfc_code'});\n}\n    \n    flow.set('lastOpenedBin', {\n        bin_id: selectedBin.bin_id,\n        bin_name: selectedBin.bin_name,\n        user_nfc_code: userNfcCode,\n        opened_at: new Date().toISOString()\n    });\n    \n    flow.set('binIsOpen', true);\n    \n    node.status({\n        fill: 'green',\n        shape: 'dot',\n        text: `\u2713 Bin OPEN - Ready for trash`\n    });\n    \n    node.warn(`\u2705 BIN OPENED SUCCESSFULLY!`);\n    node.warn(`   Bin: ${selectedBin.bin_name}`);\n    node.warn(`   User: ${userNfcCode}`);\n    node.warn(`   `);\n    node.warn(`\ud83c\udfaf NEXT STEP: Click the GREEN button to simulate trash deposit!`);\n    \n} else {\n    node.error(`\u274c Failed to open bin. Status: ${msg.statusCode}`);\n    node.status({fill:'red', shape:'ring', text:`Failed: ${msg.statusCode}`});\n    \n    // Log full error details\n    if (msg.payload) {\n        try {\n            const errorData = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n            node.warn(`Error details: ${JSON.stringify(errorData, null, 2)}`);\n        } catch (e) {\n            node.warn(`Error response: ${msg.payload}`);\n        }\n    }\n    \n    // For debugging: Still allow trash detection even if open failed\n    // This is a workaround for testing - remove in production\n    if (selectedBin) {\n        node.warn(`\u26a0\ufe0f  WARNING: Bin open failed, but allowing trash detection for testing`);\n        const userNfcCode = selectedBin?.user_nfc_code;\n\n// Debug logging\nnode.warn(`\ud83d\udd0d DEBUG: Storing lastOpenedBin:`);\nnode.warn(`   selectedBin.user_nfc_code: ${selectedBin?.user_nfc_code || 'undefined'}`);\nnode.warn(`   Using userNfcCode: ${userNfcCode || 'undefined'}`);\n\nif (!userNfcCode) {\n    node.error(`\u274c ERROR: No user_nfc_code in selectedBin! Cannot proceed.`);\n    node.status({fill:'red', shape:'ring', text:'Missing user_nfc_code'});\n}\n        flow.set('lastOpenedBin', {\n            bin_id: selectedBin.bin_id,\n            bin_name: selectedBin.bin_name,\n            user_nfc_code: userNfcCode,\n            opened_at: new Date().toISOString()\n        });\n        flow.set('binIsOpen', true);\n    }\n}\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 950,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "debug_open_response",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "Open Bin Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "comment_section4",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STATUS MONITORING & API ENDPOINTS \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 310,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "http_check_scan",
+        "type": "http in",
+        "z": "tab_main",
+        "name": "GET /nfc/check-scan/:bin_id",
+        "url": "/nfc/check-scan/:bin_id",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 190,
+        "y": 600,
+        "wires": [
+            [
+                "function_check_scan_result"
+            ]
+        ]
+    },
+    {
+        "id": "function_check_scan_result",
+        "type": "function",
+        "z": "tab_main",
+        "name": "Check NFC Scan Status",
+        "func": "const binId = msg.req.params.bin_id;\nconst scanResult = flow.get('nfcScanResult');\n\nif (scanResult && scanResult.bin_id === binId && scanResult.verified) {\n    // Clear result after reading\n    flow.set('nfcScanResult', null);\n    \n    msg.payload = scanResult;\n    msg.statusCode = 200;\n} else {\n    msg.payload = {\n        success: false,\n        verified: false,\n        message: 'No scan result yet'\n    };\n    msg.statusCode = 404;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 600,
+        "wires": [
+            [
+                "http_response_check"
+            ]
+        ]
+    },
+    {
+        "id": "http_response_check",
+        "type": "http response",
+        "z": "tab_main",
+        "name": "Return Scan Status",
+        "statusCode": "",
+        "headers": {
+            "Access-Control-Allow-Origin": "*"
+        },
+        "x": 720,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "status_indicator",
+        "type": "status",
+        "z": "tab_main",
+        "name": "Flow Status Monitor",
+        "scope": [
+            "function_store_selected_bin",
+            "function_nfc_scan",
+            "function_store_opened",
+            "function_detect_trash"
+        ],
+        "x": 160,
+        "y": 700,
+        "wires": [
+            [
+                "debug_status"
+            ]
+        ]
+    },
+    {
+        "id": "debug_status",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "Status Updates",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "status",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 390,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "comment_section3",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 STEP 3: TRASH DETECTION (Click Green Button After Bin Opens) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 420,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "inject_detect_trash",
+        "type": "inject",
+        "z": "tab_main",
+        "name": "\ud83d\udfe2 Simulate: User Puts Trash",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 440,
         "wires": [
             [
                 "function_detect_trash"
@@ -62,18 +373,19 @@
         "id": "function_detect_trash",
         "type": "function",
         "z": "tab_main",
-        "name": "Create Detection",
-        "func": "// Get bin ID - use first available bin or set your own\nconst bin_id = env.get('BIN_ID') || 'b3602a54-17b8-476d-b5ed-518245362690';\nconst user_qr = env.get('USER_QR') || 'SB-user-001';\n\n// Random material type\nconst materials = ['plastic', 'paper', 'glass', 'metal', 'organic', 'other'];\nconst material = materials[Math.floor(Math.random() * materials.length)];\n\n// Confidence between 0.85 and 0.99\nconst confidence = (Math.random() * 0.14 + 0.85).toFixed(2);\n\nmsg.topic = `bin/${bin_id}/detected`;\nmsg.payload = {\n    bin_id: bin_id,\n    user_qr_code: user_qr,\n    material: material,\n    material_type: material,\n    confidence: parseFloat(confidence),\n    timestamp: new Date().toISOString(),\n    event: 'material_detected'\n};\n\nreturn msg;",
+        "name": "\ud83c\udfaf Detect Material & Publish MQTT",
+        "func": "const lastBin = flow.get('lastOpenedBin');\nconst binIsOpen = flow.get('binIsOpen');\n\nif (!lastBin || !lastBin.bin_id) {\n    node.error('\u274c No bin is currently open. Please open a bin first (click blue button).');\n    node.status({fill:'red',shape:'ring',text:'No bin open'});\n    node.warn('\u26a0\ufe0f  ERROR: No bin is open!');\n    node.warn('   Please click the BLUE \"Simulate NFC Tap\" button first');\n    return null;\n}\n\nif (!binIsOpen) {\n    node.error('\u274c Bin is closed. Cannot detect trash.');\n    node.status({fill:'orange',shape:'ring',text:'Bin closed'});\n    return null;\n}\n\nconst bin_id = lastBin.bin_id;\nconst user_nfc = lastBin.user_nfc_code;  // Only use user_nfc_code, no fallback\n\nif (!user_nfc) {\n    node.error('\u274c No user NFC code available. Cannot detect trash.');\n    node.status({fill:'red',shape:'ring',text:'No user NFC code'});\n    return null;\n}\n\n// Simulate AI detection with realistic probabilities\nconst materials = [\n    { type: 'plastic', weight: 35, points: 10, emoji: '\ud83e\udd64' },\n    { type: 'paper', weight: 25, points: 8, emoji: '\ud83d\udcc4' },\n    { type: 'glass', weight: 15, points: 15, emoji: '\ud83c\udf7e' },\n    { type: 'metal', weight: 12, points: 12, emoji: '\ud83e\udd6b' },\n    { type: 'organic', weight: 10, points: 5, emoji: '\ud83c\udf4e' },\n    { type: 'other', weight: 3, points: 3, emoji: '\ud83d\uddd1\ufe0f' }\n];\n\n// Weighted random selection\nconst totalWeight = materials.reduce((sum, m) => sum + m.weight, 0);\nlet random = Math.random() * totalWeight;\nlet selectedMaterial = materials[0];\n\nfor (const material of materials) {\n    random -= material.weight;\n    if (random <= 0) {\n        selectedMaterial = material;\n        break;\n    }\n}\n\n// High confidence for good detection\nconst confidence = (Math.random() * 0.14 + 0.86).toFixed(2);\n\nnode.warn(`\ud83c\udfaf TRASH DETECTED!`);\nnode.warn(`   Material: ${selectedMaterial.emoji} ${selectedMaterial.type.toUpperCase()}`);\nnode.warn(`   Confidence: ${(confidence * 100).toFixed(0)}%`);\nnode.warn(`   Points to award: +${selectedMaterial.points} \ud83d\udc8e`);\nnode.warn(`   `);\nnode.warn(`\ud83d\udce1 Publishing to MQTT: bin/${bin_id}/detected`);\nnode.warn(`   \ud83d\udd0d DEBUG: user_nfc = ${user_nfc}`);\nnode.warn(`   \ud83d\udd0d DEBUG: lastBin.user_nfc_code = ${lastBin.user_nfc_code || 'undefined'}`);\nnode.warn(`   \ud83d\udd0d DEBUG: lastBin.user_qr_code = ${lastBin.user_qr_code || 'undefined'}`);\n\nmsg.topic = `bin/${bin_id}/detected`;\nmsg.payload = {\n    bin_id: bin_id,\n    user_nfc_code: user_nfc,\n    material: selectedMaterial.type,\n    material_type: selectedMaterial.type,\n    confidence: parseFloat(confidence),\n    points_expected: selectedMaterial.points,\n    timestamp: new Date().toISOString(),\n    event: 'material_detected'\n};\n\n// Store detection for status\nflow.set('lastDetection', {\n    material: selectedMaterial.type,\n    points: selectedMaterial.points,\n    timestamp: new Date().toISOString()\n});\n\nnode.status({\n    fill:'green',\n    shape:'dot',\n    text:`\u2713 ${selectedMaterial.emoji} ${selectedMaterial.type} (+${selectedMaterial.points}pts)`\n});\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 360,
-        "y": 100,
+        "x": 460,
+        "y": 440,
         "wires": [
             [
-                "mqtt_publish_detect"
+                "mqtt_publish_detect",
+                "function_auto_close"
             ]
         ]
     },
@@ -81,25 +393,47 @@
         "id": "mqtt_publish_detect",
         "type": "mqtt out",
         "z": "tab_main",
-        "name": "Publish to MQTT",
+        "name": "\ud83d\udce1 Publish to Detection Service",
         "topic": "",
         "qos": "1",
         "retain": "false",
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
         "broker": "mqtt_broker",
-        "x": 600,
-        "y": 100,
+        "x": 750,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "function_auto_close",
+        "type": "function",
+        "z": "tab_main",
+        "name": "\ud83d\udd12 Auto-Close Bin (3s delay)",
+        "func": "// Auto-close bin after detection\nconst lastBin = flow.get('lastOpenedBin');\n\nif (lastBin && lastBin.bin_id) {\n    node.status({fill:'yellow',shape:'ring',text:'Closing in 3s...'});\n    \n    // Wait 3 seconds before closing\n    setTimeout(() => {\n        node.warn(`\ud83d\udd12 AUTO-CLOSING BIN...`);\n        \n        // Clear states\n        flow.set('binIsOpen', false);\n        flow.set('lastOpenedBin', null);\n        flow.set('selectedBin', null);\n        \n        node.status({fill:'grey',shape:'ring',text:'Bin closed'});\n        \n        node.warn(`\u2705 COMPLETE! Check the web app for points update!`);\n        node.warn(`   `);\n        node.warn(`\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`);\n        node.warn(`\ud83c\udf89 Flow Complete! Ready for next cycle.`);\n        node.warn(`   You can select another bin and repeat!`);\n        node.warn(`\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`);\n    }, 3000);\n}\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 480,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "comment_section5",
+        "type": "comment",
+        "z": "tab_main",
+        "name": "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 MQTT EVENT LISTENERS (Background Monitoring) \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "info": "",
+        "x": 340,
+        "y": 760,
         "wires": []
     },
     {
         "id": "mqtt_subscribe_open",
         "type": "mqtt in",
         "z": "tab_main",
-        "name": "Listen: Bin Opens",
+        "name": "\ud83d\udce1 Listen: bin/+/open",
         "topic": "bin/+/open",
         "qos": "1",
         "datatype": "json",
@@ -108,56 +442,159 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 150,
-        "y": 180,
+        "x": 160,
+        "y": 800,
         "wires": [
             [
-                "function_auto_detect"
+                "function_log_bin_open",
+                "debug_mqtt_open"
             ]
         ]
     },
     {
-        "id": "function_auto_detect",
+        "id": "function_log_bin_open",
         "type": "function",
         "z": "tab_main",
-        "name": "Create Detection",
-        "func": "// When bin opens, prepare detection message\nconst bin_id = msg.payload.bin_id || msg.topic.split('/')[1];\nconst user_qr = msg.payload.user_qr_code || 'SB-user-001';\n\n// Random material type\nconst materials = ['plastic', 'paper', 'glass', 'metal', 'organic', 'other'];\nconst material = materials[Math.floor(Math.random() * materials.length)];\n\n// Confidence between 0.85 and 0.99\nconst confidence = (Math.random() * 0.14 + 0.85).toFixed(2);\n\nmsg.topic = `bin/${bin_id}/detected`;\nmsg.payload = {\n    bin_id: bin_id,\n    user_qr_code: user_qr,\n    material: material,\n    material_type: material,\n    confidence: parseFloat(confidence),\n    timestamp: new Date().toISOString(),\n    event: 'material_detected'\n};\n\nreturn msg;",
+        "name": "Log Bin Open Event",
+        "func": "const bin_id = msg.payload.bin_id || msg.topic.split('/')[1];\nconst user_nfc = msg.payload.user_nfc_code || msg.payload.user_qr_code || 'unknown';\n\nnode.warn(`\ud83d\udce3 MQTT Event: Bin opened`);\nnode.warn(`   Bin ID: ${bin_id}`);\nnode.warn(`   User: ${user_nfc}`);\n\nreturn null;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 180,
+        "x": 410,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "debug_mqtt_open",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "MQTT: Open",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 400,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "mqtt_subscribe_close",
+        "type": "mqtt in",
+        "z": "tab_main",
+        "name": "\ud83d\udce1 Listen: bin/+/close",
+        "topic": "bin/+/close",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "mqtt_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 880,
         "wires": [
             [
-                "delay_3_5_seconds"
+                "function_log_bin_close",
+                "debug_mqtt_close"
             ]
         ]
     },
     {
-        "id": "delay_3_5_seconds",
-        "type": "delay",
+        "id": "function_log_bin_close",
+        "type": "function",
         "z": "tab_main",
-        "name": "Wait 3-5 seconds",
-        "pauseType": "random",
-        "timeout": "3",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "3",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": false,
-        "allowrate": false,
+        "name": "Log Bin Close Event",
+        "func": "const bin_id = msg.payload.bin_id || msg.topic.split('/')[1];\n\nnode.warn(`\ud83d\udce3 MQTT Event: Bin closed`);\nnode.warn(`   Bin ID: ${bin_id}`);\n\nreturn null;",
         "outputs": 1,
-        "x": 600,
-        "y": 180,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 880,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "debug_mqtt_close",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "MQTT: Close",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 400,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "mqtt_subscribe_detected",
+        "type": "mqtt in",
+        "z": "tab_main",
+        "name": "\ud83d\udce1 Listen: bin/+/detected",
+        "topic": "bin/+/detected",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "mqtt_broker",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 960,
         "wires": [
             [
-                "mqtt_publish_detect"
+                "function_log_detection",
+                "debug_mqtt_detected"
             ]
         ]
+    },
+    {
+        "id": "function_log_detection",
+        "type": "function",
+        "z": "tab_main",
+        "name": "Log Detection Event",
+        "func": "const material = msg.payload.material_type || msg.payload.material;\nconst confidence = msg.payload.confidence || 0;\nconst points = msg.payload.points_expected || 0;\n\nconst emojis = {\n    plastic: '\ud83e\udd64',\n    paper: '\ud83d\udcc4',\n    glass: '\ud83c\udf7e',\n    metal: '\ud83e\udd6b',\n    organic: '\ud83c\udf4e',\n    other: '\ud83d\uddd1\ufe0f'\n};\n\nconst emoji = emojis[material] || '\ud83d\uddd1\ufe0f';\n\nnode.warn(`\ud83d\udce3 MQTT Event: Material detected`);\nnode.warn(`   Material: ${emoji} ${material}`);\nnode.warn(`   Confidence: ${(confidence * 100).toFixed(0)}%`);\nnode.warn(`   Points: +${points} \ud83d\udc8e`);\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 960,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "debug_mqtt_detected",
+        "type": "debug",
+        "z": "tab_main",
+        "name": "MQTT: Detected",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 1000,
+        "wires": []
     }
 ]

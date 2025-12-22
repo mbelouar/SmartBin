@@ -4,15 +4,18 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BinCard } from "@/components/bin-card"
-import { binApi, isAuthenticated, getUser } from "@/lib/api"
+import { binApi } from "@/lib/api"
 import type { Bin } from "@/lib/types"
-import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2, AlertCircle, AlertTriangle } from "lucide-react"
+import { MapView } from "@/components/map-view"
+import { Plus, MapPin, Loader2, CheckCircle2, XCircle, Trash2, AlertCircle, AlertTriangle, LayoutGrid, Map as MapIcon } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { MapPicker } from "@/components/map-picker"
+import { useAuth, useUser } from "@clerk/nextjs"
 
 export function AdminDashboard() {
   const [bins, setBins] = useState<Bin[]>([])
@@ -20,32 +23,20 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [isAuth, setIsAuth] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [view, setView] = useState<"manage" | "map">("manage")
+  const [editingBinId, setEditingBinId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; bin: Bin | null }>({ show: false, bin: null })
   const [deleting, setDeleting] = useState(false)
   const [selectedCity, setSelectedCity] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [selectedMapBin, setSelectedMapBin] = useState<Bin | null>(null)
   const { toast } = useToast()
-
-  useEffect(() => {
-    // Check authentication status
-    const checkAuth = () => {
-      const authenticated = isAuthenticated()
-      const currentUser = getUser()
-      setIsAuth(authenticated)
-      setUser(currentUser)
-      
-      if (!authenticated) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in as an admin user to manage bins.",
-          variant: "destructive",
-        })
-      }
-    }
-    checkAuth()
-  }, [toast])
+  
+  // Use Clerk authentication
+  const { isSignedIn, isLoaded } = useAuth()
+  const { user } = useUser()
+  
+  const isAuth = isSignedIn && isLoaded
 
   // Form state
   const [formData, setFormData] = useState({
@@ -123,13 +114,20 @@ export function AdminDashboard() {
         status: formData.status,
       }
 
-      await binApi.create(binData)
+      if (editingBinId) {
+        await binApi.update(editingBinId, binData)
+        toast({
+          title: "Updated",
+          description: "Bin updated successfully!",
+        })
+      } else {
+        await binApi.create(binData)
+        toast({
+          title: "Success",
+          description: "Bin created successfully!",
+        })
+      }
       
-      toast({
-        title: "Success",
-        description: "Bin created successfully!",
-      })
-
       // Reset form
       setFormData({
         name: "",
@@ -140,6 +138,7 @@ export function AdminDashboard() {
         capacity: "100",
         status: "active",
       })
+      setEditingBinId(null)
       setShowForm(false)
       loadBins()
     } catch (err: any) {
@@ -166,6 +165,21 @@ export function AdminDashboard() {
 
   const confirmDelete = (bin: Bin) => {
     setDeleteConfirm({ show: true, bin })
+  }
+
+  const startEdit = (bin: Bin) => {
+    setEditingBinId(bin.id)
+    setShowForm(true)
+    setView("manage")
+    setFormData({
+      name: bin.name || "",
+      city: bin.city || "",
+      location: bin.location || "",
+      latitude: bin.latitude ? String(bin.latitude) : "",
+      longitude: bin.longitude ? String(bin.longitude) : "",
+      capacity: bin.capacity ? String(bin.capacity) : "100",
+      status: (bin.status as any) || "active",
+    })
   }
 
   const handleDelete = async () => {
@@ -205,7 +219,14 @@ export function AdminDashboard() {
             <p className="text-muted-foreground text-lg font-medium">Add and manage smart bins</p>
           </div>
           <Button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (!showForm) {
+                setEditingBinId(null)
+                setFormData({ name: "", city: "", location: "", latitude: "", longitude: "", capacity: "100", status: "active" })
+              }
+              setShowForm(!showForm)
+              setView("manage")
+            }}
             disabled={!isAuth}
             className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50"
           >
@@ -243,259 +264,286 @@ export function AdminDashboard() {
         </motion.div>
       )}
 
-      {isAuth && user && !user.is_staff && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass border-warning/50 bg-warning/10 p-4 rounded-lg"
+      {/* Note: Admin access is already checked at the page level, so this warning shouldn't show */}
+
+      {/* Toggle between Manage and Map */}
+      <div className="flex items-center gap-3 mb-4">
+        <Button
+          variant={view === "manage" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setView("manage")}
+          className="gap-2"
         >
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-bold text-warning mb-1">Admin Access Required</h3>
-              <p className="text-sm text-muted-foreground">
-                You are logged in as <strong>{user.username}</strong>, but you need admin privileges to create bins.
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Contact an administrator or create a superuser account.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Add Bin Form */}
-      {showForm && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
+          <LayoutGrid className="w-4 h-4" />
+          Manage
+        </Button>
+        <Button
+          variant={view === "map" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setView("map")}
+          className="gap-2"
         >
-          <Card className="p-6 glass border-primary/30">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Bin Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Smart Bin #001"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g., Casablanca"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="location">Location *</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="e.g., Central Park, Main Street"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <MapPicker
-                    onLocationSelect={(lat, lng) => {
-                      setFormData({
-                        ...formData,
-                        latitude: lat.toString(),
-                        longitude: lng.toString(),
-                      })
-                    }}
-                    selectedLocation={
-                      formData.latitude && formData.longitude
-                        ? {
-                            lat: parseFloat(formData.latitude),
-                            lng: parseFloat(formData.longitude),
-                          }
-                        : undefined
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="latitude">Latitude (or use map above)</Label>
-                  <Input
-                    id="latitude"
-                    type="number"
-                    step="any"
-                    value={formData.latitude}
-                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    placeholder="e.g., 40.7128"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="longitude">Longitude (or use map above)</Label>
-                  <Input
-                    id="longitude"
-                    type="number"
-                    step="any"
-                    value={formData.longitude}
-                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    placeholder="e.g., -74.0060"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity (Liters) *</Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    placeholder="100"
-                    required
-                    min="1"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="full">Full</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      Create Bin
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowForm(false)}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Bins List */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-2xl font-bold text-foreground">
-            All Bins ({filteredBins.length}{bins.length !== filteredBins.length ? ` of ${bins.length}` : ""})
-          </h3>
-          
-          {/* Filters */}
-          <div className="flex gap-3">
-            <Select value={selectedCity} onValueChange={setSelectedCity}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by city" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="full">Full</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : bins.length === 0 ? (
-          <Card className="p-12 text-center glass">
-            <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground text-lg">No bins found. Create your first bin!</p>
-          </Card>
-        ) : filteredBins.length === 0 ? (
-          <Card className="p-12 text-center glass">
-            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground text-lg">No bins match the selected filters.</p>
+          <MapIcon className="w-4 h-4" />
+          Map
+        </Button>
+        {editingBinId && (
+          <Badge variant="outline" className="gap-2">
+            Editing bin
             <Button
-              variant="outline"
-              className="mt-4"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
               onClick={() => {
-                setSelectedCity("all")
-                setSelectedStatus("all")
+                setEditingBinId(null)
+                setFormData({ name: "", city: "", location: "", latitude: "", longitude: "", capacity: "100", status: "active" })
               }}
             >
-              Clear Filters
+              Clear
             </Button>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredBins.map((bin) => (
-              <div key={bin.id} className="relative group">
-                <BinCard bin={bin} onSelect={() => {}} />
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => confirmDelete(bin)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
+          </Badge>
         )}
       </div>
+
+      {view === "map" ? (
+        <div className="flex-1 min-h-[60vh]">
+          <MapView adminMode onBinSelect={(bin) => { setSelectedMapBin(bin); startEdit(bin) }} selectedBin={selectedMapBin} />
+        </div>
+      ) : (
+        <>
+          {/* Add Bin Form */}
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="p-6 glass border-primary/30">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Bin Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Smart Bin #001"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="e.g., Casablanca"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="location">Location *</Label>
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="e.g., Central Park, Main Street"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <MapPicker
+                        onLocationSelect={(lat, lng) => {
+                          setFormData({
+                            ...formData,
+                            latitude: lat.toString(),
+                            longitude: lng.toString(),
+                          })
+                        }}
+                        selectedLocation={
+                          formData.latitude && formData.longitude
+                            ? {
+                                lat: parseFloat(formData.latitude),
+                                lng: parseFloat(formData.longitude),
+                              }
+                            : undefined
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="latitude">Latitude (or use map above)</Label>
+                      <Input
+                        id="latitude"
+                        type="number"
+                        step="any"
+                        value={formData.latitude}
+                        onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                        placeholder="e.g., 40.7128"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="longitude">Longitude (or use map above)</Label>
+                      <Input
+                        id="longitude"
+                        type="number"
+                        step="any"
+                        value={formData.longitude}
+                        onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                        placeholder="e.g., -74.0060"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="capacity">Capacity (Liters) *</Label>
+                      <Input
+                        id="capacity"
+                        type="number"
+                        value={formData.capacity}
+                        onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                        placeholder="100"
+                        required
+                        min="1"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status *</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="full">Full</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      className="gap-2 bg-gradient-eco hover:scale-105 transition-all duration-300"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {editingBinId ? "Saving..." : "Creating..."}
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          {editingBinId ? "Save Changes" : "Create Bin"}
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForm(false)}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Bins List */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-foreground">
+                All Bins ({filteredBins.length}{bins.length !== filteredBins.length ? ` of ${bins.length}` : ""})
+              </h3>
+              
+              {/* Filters */}
+              <div className="flex gap-3">
+                <Select value={selectedCity} onValueChange={setSelectedCity}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="full">Full</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : bins.length === 0 ? (
+              <Card className="p-12 text-center glass">
+                <MapPin className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground text-lg">No bins found. Create your first bin!</p>
+              </Card>
+            ) : filteredBins.length === 0 ? (
+              <Card className="p-12 text-center glass">
+                <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground text-lg">No bins match the selected filters.</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => {
+                    setSelectedCity("all")
+                    setSelectedStatus("all")
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBins.map((bin) => (
+                  <div key={bin.id} className="relative group">
+                    <BinCard bin={bin} onClick={() => startEdit(bin)} />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => confirmDelete(bin)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AnimatePresence>

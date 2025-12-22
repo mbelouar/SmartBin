@@ -19,7 +19,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Allow all hosts including Docker service names
+ALLOWED_HOSTS = [
+    '*',
+    'localhost',
+    '127.0.0.1',
+    'bin_service',
+    'bin-service',
+    '.localhost',
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -110,7 +118,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'bins.authentication.BinServiceJWTAuthentication',
+        'bins.clerk_authentication.ClerkAuthentication',  # Try Clerk first
+        'bins.authentication.BinServiceJWTAuthentication',  # Fallback to Django JWT
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',  # Changed to AllowAny, permissions checked per view

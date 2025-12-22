@@ -5,9 +5,11 @@ from .views import (
     LoginView,
     UserProfileView,
     UserDetailView,
+    UserByClerkIdView,
     AddPointsView,
     PointsHistoryView,
     HealthCheckView,
+    ClerkSyncView,
 )
 
 urlpatterns = [
@@ -19,10 +21,14 @@ urlpatterns = [
     # User Profile
     path('profile/', UserProfileView.as_view(), name='user_profile'),
     path('users/<uuid:id>/', UserDetailView.as_view(), name='user_detail'),
+    path('users/clerk/<str:clerk_id>/', UserByClerkIdView.as_view(), name='user_by_clerk_id'),
     
     # Points Management
     path('points/add/', AddPointsView.as_view(), name='add_points'),
     path('points/history/', PointsHistoryView.as_view(), name='points_history'),
+    
+    # Clerk Integration
+    path('clerk-sync/', ClerkSyncView.as_view(), name='clerk_sync'),
     
     # Health Check
     path('health/', HealthCheckView.as_view(), name='health_check'),

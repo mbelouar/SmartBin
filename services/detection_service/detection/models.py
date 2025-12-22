@@ -17,7 +17,7 @@ class MaterialDetection(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bin_id = models.UUIDField(help_text="ID of the bin where detection occurred")
-    user_qr_code = models.CharField(max_length=100, help_text="QR code of the user")
+    user_nfc_code = models.CharField(max_length=100, help_text="NFC code of the user")
     material_type = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
     confidence = models.FloatField(default=0.0, help_text="Detection confidence (0-1)")
     points_awarded = models.IntegerField(default=0)
@@ -29,7 +29,7 @@ class MaterialDetection(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.material_type} - {self.user_qr_code} - {self.created_at}"
+        return f"{self.material_type} - {self.user_nfc_code} - {self.created_at}"
     
     def award_points(self):
         """
@@ -47,7 +47,7 @@ class MaterialDetection(models.Model):
         
         # Add points via Auth Service
         success = add_points_to_user(
-            user_qr_code=self.user_qr_code,
+            user_nfc_code=self.user_nfc_code,
             points=points,
             description=f"Detected {self.material_type} waste"
         )

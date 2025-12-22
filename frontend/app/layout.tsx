@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { ClerkProvider } from "@clerk/nextjs"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -25,12 +26,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${spaceGrotesk.className} font-sans antialiased`}>
-        {children}
-        <Toaster />
-        <Analytics />
-      </body>
-    </html>
+    <ClerkProvider
+      afterSignInUrl="/dashboard"
+      afterSignUpUrl="/dashboard"
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+    >
+      <html lang="en" className="dark">
+        <body className={`${spaceGrotesk.className} font-sans antialiased`}>
+          {children}
+          <Toaster />
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

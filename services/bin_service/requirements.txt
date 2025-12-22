@@ -18,3 +18,4 @@ python-decouple==3.8
 
 # Utilities
 requests==2.31.0
+PyJWT==2.8.0

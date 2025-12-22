@@ -30,7 +30,7 @@ class Reclamation(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_qr_code = models.CharField(max_length=100, help_text="QR code of the user submitting the reclamation")
+    user_nfc_code = models.CharField(max_length=100, help_text="NFC code of the user submitting the reclamation")
     bin_id = models.UUIDField(null=True, blank=True, help_text="ID of the bin (if applicable)")
     reclamation_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='other')
     title = models.CharField(max_length=200)

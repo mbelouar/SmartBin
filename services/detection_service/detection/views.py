@@ -24,12 +24,12 @@ class MaterialDetectionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
-        """Filter by user_qr_code, bin_id, or material_type if provided"""
+        """Filter by user_nfc_code, bin_id, or material_type if provided"""
         queryset = super().get_queryset()
         
-        user_qr = self.request.query_params.get('user_qr_code', None)
-        if user_qr:
-            queryset = queryset.filter(user_qr_code=user_qr)
+        user_nfc = self.request.query_params.get('user_nfc_code', None)
+        if user_nfc:
+            queryset = queryset.filter(user_nfc_code=user_nfc)
         
         bin_id = self.request.query_params.get('bin_id', None)
         if bin_id:
@@ -38,6 +38,20 @@ class MaterialDetectionViewSet(viewsets.ReadOnlyModelViewSet):
         material = self.request.query_params.get('material', None)
         if material:
             queryset = queryset.filter(material_type=material)
+        
+        # Support ordering query param (e.g., ?ordering=-created_at)
+        ordering = self.request.query_params.get('ordering', None)
+        if ordering:
+            queryset = queryset.order_by(ordering)
+        
+        # Support limit query param (e.g., ?limit=10)
+        limit = self.request.query_params.get('limit', None)
+        if limit:
+            try:
+                limit_int = int(limit)
+                queryset = queryset[:limit_int]
+            except ValueError:
+                pass
         
         return queryset
     
@@ -106,7 +120,7 @@ class SimulateDetectionView(APIView):
             # Create detection
             detection = MaterialDetection.objects.create(
                 bin_id=data['bin_id'],
-                user_qr_code=data['user_qr_code'],
+                user_nfc_code=data['user_nfc_code'],
                 material_type=data['material'],
                 confidence=data['confidence']
             )

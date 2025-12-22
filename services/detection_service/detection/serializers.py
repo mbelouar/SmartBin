@@ -8,7 +8,7 @@ class MaterialDetectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaterialDetection
         fields = [
-            'id', 'bin_id', 'user_qr_code', 'material_type',
+            'id', 'bin_id', 'user_nfc_code', 'material_type',
             'confidence', 'points_awarded', 'points_added_to_user', 'created_at'
         ]
         read_only_fields = ['id', 'points_awarded', 'points_added_to_user', 'created_at']
@@ -30,7 +30,7 @@ class DetectionStatsSerializer(serializers.ModelSerializer):
 class SimulateDetectionSerializer(serializers.Serializer):
     """Serializer for simulating detection (for testing)"""
     bin_id = serializers.UUIDField(required=True)
-    user_qr_code = serializers.CharField(required=True, max_length=100)
+    user_nfc_code = serializers.CharField(required=True, max_length=100)
     material = serializers.ChoiceField(
         choices=['plastic', 'paper', 'glass', 'metal', 'organic', 'other'],
         default='plastic'

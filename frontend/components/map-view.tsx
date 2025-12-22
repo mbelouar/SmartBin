@@ -20,6 +20,7 @@ import {
 interface MapViewProps {
   onBinSelect: (bin: Bin) => void
   selectedBin?: Bin | null
+  adminMode?: boolean
 }
 
 type MapLayer = "osm" | "satellite" | "terrain"
@@ -30,7 +31,7 @@ const mapLayers: { id: MapLayer; name: string; icon: React.ReactNode }[] = [
   { id: "terrain", name: "Terrain", icon: <Mountain className="w-4 h-4" /> },
 ]
 
-export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
+export function MapView({ onBinSelect, selectedBin, adminMode = false }: MapViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
   const [filteredBins, setFilteredBins] = useState<Bin[]>([])
   const [selectedBinId, setSelectedBinId] = useState<string | null>(null)
@@ -97,7 +98,7 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
   }
 
   const handleUseBin = (bin: Bin) => {
-    // Only trigger full-screen modal when "Use This Bin" is clicked
+    // In admin mode we just show info/edit, in user mode this opens the use flow
     onBinSelect(bin)
   }
 
@@ -231,6 +232,7 @@ export function MapView({ onBinSelect, selectedBin }: MapViewProps) {
             userLocation={userLocation}
             isModalOpen={!!selectedBin}
             mapLayer={mapLayer}
+            adminMode={adminMode}
           />
         )}
       </motion.div>

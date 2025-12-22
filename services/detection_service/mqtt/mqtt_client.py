@@ -60,47 +60,78 @@ class DetectionMQTTClient:
         Expected message format:
         {
             "bin_id": "uuid",
-            "user_qr_code": "SB-uuid",
+            "user_nfc_code": "SB-uuid",
             "material": "plastic",
             "confidence": 0.95
         }
         """
         try:
             topic = msg.topic
-            payload = json.loads(msg.payload.decode())
+            payload_str = msg.payload.decode('utf-8')
+            logger.info(f"📩 RAW MQTT message received!")
+            logger.info(f"   Topic: {topic}")
+            logger.info(f"   Raw payload: {payload_str}")
+            
+            payload = json.loads(payload_str)
             
             logger.info(f"📩 Received message on {topic}")
-            logger.info(f"   Payload: {payload}")
+            logger.info(f"   Parsed payload: {payload}")
             
-            # Extract data
+            # Extract data - try both 'material' and 'material_type'
+            # Support both old 'user_qr_code' and new 'user_nfc_code' for backward compatibility
             bin_id = payload.get('bin_id')
-            user_qr_code = payload.get('user_qr_code')
-            material = payload.get('material', 'other')
+            user_nfc_code = payload.get('user_nfc_code') or payload.get('user_qr_code')  # Backward compatibility
+            material = payload.get('material') or payload.get('material_type', 'other')
             confidence = payload.get('confidence', 0.0)
             
+            logger.info(f"   Extracted: bin_id={bin_id} (type: {type(bin_id)}), user_nfc_code={user_nfc_code}, material={material}, confidence={confidence}")
+            
             # Validate data
-            if not bin_id or not user_qr_code:
+            if not bin_id or not user_nfc_code:
                 logger.error("❌ Missing required fields in MQTT message")
+                logger.error(f"   bin_id: {bin_id}, user_nfc_code: {user_nfc_code}")
                 return
             
-            # Create detection record
-            detection = MaterialDetection.objects.create(
-                bin_id=bin_id,
-                user_qr_code=user_qr_code,
-                material_type=material,
-                confidence=confidence
-            )
+            # Ensure bin_id is a string (UUID field expects string)
+            bin_id_str = str(bin_id).strip()
             
-            logger.info(f"✅ Detection saved: {detection.id}")
+            # Validate UUID format
+            try:
+                import uuid
+                uuid.UUID(bin_id_str)  # This will raise ValueError if not a valid UUID
+            except (ValueError, AttributeError) as e:
+                logger.error(f"❌ Invalid bin_id format (must be UUID): {bin_id_str}")
+                logger.error(f"   Error: {e}")
+                return
+            
+            logger.info(f"   Creating detection with bin_id: {bin_id_str}")
+            
+            # Create detection record IMMEDIATELY
+            try:
+                detection = MaterialDetection.objects.create(
+                    bin_id=bin_id_str,
+                    user_nfc_code=user_nfc_code,
+                    material_type=material,
+                    confidence=confidence
+                )
+            except Exception as e:
+                logger.error(f"❌ Error creating detection record: {e}")
+                import traceback
+                traceback.print_exc()
+                return
+            
+            logger.info(f"✅ Detection saved IMMEDIATELY: {detection.id} for bin {bin_id}")
+            logger.info(f"   Material: {material}, Confidence: {confidence}")
+            logger.info(f"   Created at: {detection.created_at}")
             
             # Award points to user
             logger.info(f"💰 Awarding points for {material}...")
             success = detection.award_points()
             
             if success:
-                logger.info(f"✅ Points awarded successfully: {detection.points_awarded} points")
+                logger.info(f"✅ Points awarded successfully: {detection.points_awarded} points to {user_nfc_code}")
             else:
-                logger.error("❌ Failed to award points")
+                logger.warning(f"⚠️ Failed to award points (detection still created: {detection.id})")
             
             # Update daily stats
             self._update_stats(material, detection.points_awarded)
@@ -138,29 +169,58 @@ class DetectionMQTTClient:
     def connect(self):
         """Connect to MQTT broker"""
         try:
-            self.client.connect(self.broker, self.port, keepalive=settings.MQTT_KEEPALIVE)
-            self.client.loop_start()
-            logger.info("🚀 MQTT client started")
+            if not self.connected:
+                self.client.connect(self.broker, self.port, keepalive=settings.MQTT_KEEPALIVE)
+                self.client.loop_start()
+                logger.info("🚀 MQTT client started")
             return True
         except Exception as e:
             logger.error(f"❌ Error connecting to MQTT broker: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def disconnect(self):
         """Disconnect from MQTT broker"""
-        self.client.loop_stop()
-        self.client.disconnect()
-        self.connected = False
-        logger.info("🛑 MQTT client stopped")
+        try:
+            self.client.loop_stop()
+            if self.connected:
+                self.client.disconnect()
+            self.connected = False
+            logger.info("🛑 MQTT client stopped")
+        except Exception as e:
+            logger.error(f"Error disconnecting: {e}")
     
     def run_forever(self):
         """Keep the MQTT client running"""
         try:
-            self.connect()
-            # Keep running until interrupted
-            self.client.loop_forever()
+            # Connect first
+            if not self.connected:
+                self.client.connect(self.broker, self.port, keepalive=settings.MQTT_KEEPALIVE)
+            
+            # Start the loop in a non-blocking way
+            self.client.loop_start()
+            logger.info("🚀 MQTT client loop started")
+            
+            # Keep running - loop_start() runs in background thread
+            import time
+            while True:
+                time.sleep(1)
+                # Check connection status periodically
+                if not self.connected:
+                    logger.warning("⚠️  MQTT client disconnected, attempting reconnect...")
+                    try:
+                        self.client.reconnect()
+                    except Exception as e:
+                        logger.error(f"Reconnect error: {e}")
+                        time.sleep(5)  # Wait before retry
         except KeyboardInterrupt:
             logger.info("⏹️  Stopping MQTT client...")
+            self.disconnect()
+        except Exception as e:
+            logger.error(f"❌ Error in run_forever: {e}")
+            import traceback
+            traceback.print_exc()
             self.disconnect()
 
 

@@ -82,6 +82,15 @@ DATABASES = {
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 
+# Authentication Backends (Django + Clerk)
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+    'accounts.clerk_backend.ClerkBackend',  # Clerk JWT auth
+]
+
+# Clerk Configuration
+CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {

@@ -75,69 +75,101 @@ class BinViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    @action(detail=True, methods=['post'], url_path='open')
+    @action(detail=True, methods=['post'], url_path='open', permission_classes=[permissions.AllowAny])
     def open_bin(self, request, id=None):
         """
         Open a specific bin
         POST /api/bins/{id}/open/
-        Body: {"user_qr_code": "SB-...", "nfc_tag_id": "NFC-..."}
+        Body: {"user_nfc_code": "SB-...", "nfc_tag_id": "NFC-..."}
+        Note: AllowAny for Node-RED and IoT device integration
         """
         bin_instance = self.get_object()
         serializer = OpenBinSerializer(data=request.data)
         
-        if serializer.is_valid():
-            user_qr_code = serializer.validated_data['user_qr_code']
-            nfc_tag_id = serializer.validated_data.get('nfc_tag_id')
-            
-            # Verify NFC tag if provided (proximity verification)
-            if nfc_tag_id:
-                if nfc_tag_id != bin_instance.nfc_tag_id:
-                    return Response({
-                        'error': 'Invalid NFC tag. Please scan the correct bin.',
-                        'detail': 'You must be near the bin to open it.'
-                    }, status=status.HTTP_403_FORBIDDEN)
-            
-            # Check if bin is already open
-            if bin_instance.is_open:
+        if not serializer.is_valid():
+            # Log validation errors for debugging
+            logger.error(f"Open bin validation failed: {serializer.errors}")
+            logger.error(f"Request data: {request.data}")
+            logger.error(f"Request body: {request.body}")
+            return Response({
+                'error': 'Validation failed',
+                'details': serializer.errors,
+                'request_data': str(request.data)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Support both old 'user_qr_code' and new 'user_nfc_code' for backward compatibility
+        user_nfc_code = serializer.validated_data.get('user_nfc_code') or serializer.validated_data.get('user_qr_code')
+        nfc_tag_id = serializer.validated_data.get('nfc_tag_id')
+        
+        # Ensure user_nfc_code has SB- prefix for compatibility
+        if user_nfc_code and not user_nfc_code.startswith('SB-'):
+            user_nfc_code = f'SB-{user_nfc_code}'
+        
+        logger.info(f"Opening bin {bin_instance.id} for user {user_nfc_code}")
+        logger.info(f"Bin current state: is_open={bin_instance.is_open}, status={bin_instance.status}")
+        
+        # Verify NFC tag if provided (proximity verification)
+        if nfc_tag_id:
+            if nfc_tag_id != bin_instance.nfc_tag_id:
+                logger.warning(f"NFC tag mismatch: expected {bin_instance.nfc_tag_id}, got {nfc_tag_id}")
                 return Response({
-                    'error': 'Bin is already open'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Check if bin is active
-            if bin_instance.status != 'active':
-                return Response({
-                    'error': f'Bin is not available. Status: {bin_instance.status}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Publish MQTT command to open bin
-            mqtt_success = mqtt_client.open_bin(bin_instance.id, user_qr_code)
-            
-            if mqtt_success:
-                # Update bin status
-                bin_instance.open_bin()
-                
-                # Log usage
-                BinUsageLog.objects.create(
-                    bin=bin_instance,
-                    user_qr_code=user_qr_code
-                )
-                
-                return Response({
-                    'message': 'Bin opened successfully',
-                    'bin': BinSerializer(bin_instance).data
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    'error': 'Failed to send open command to bin'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    'error': 'Invalid NFC tag. Please scan the correct bin.',
+                    'detail': 'You must be near the bin to open it.'
+                }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if bin is already open
+        if bin_instance.is_open:
+            logger.warning(f"Bin {bin_instance.id} is already open")
+            # Instead of failing, just return success (bin is already open)
+            return Response({
+                'message': 'Bin is already open',
+                'bin': BinSerializer(bin_instance).data
+            }, status=status.HTTP_200_OK)
+        
+        # Check if bin is active
+        if bin_instance.status != 'active':
+            logger.warning(f"Bin {bin_instance.id} is not active, status: {bin_instance.status}")
+            return Response({
+                'error': f'Bin is not available. Status: {bin_instance.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Publish MQTT command to open bin
+        logger.info(f"Publishing MQTT open command for bin {bin_instance.id}")
+        mqtt_success = mqtt_client.open_bin(bin_instance.id, user_nfc_code)
+        logger.info(f"MQTT publish result: {mqtt_success}")
+        
+        # Update bin status regardless of MQTT success (MQTT is for physical bin, we still track state)
+        bin_instance.open_bin()
+        logger.info(f"Bin {bin_instance.id} marked as open in database")
+        
+        # Log usage
+        BinUsageLog.objects.create(
+            bin=bin_instance,
+            user_nfc_code=user_nfc_code
+        )
+        logger.info(f"Usage log created for bin {bin_instance.id}")
+        
+        # Return success even if MQTT failed (for testing/development)
+        response_data = {
+            'message': 'Bin opened successfully',
+            'bin': BinSerializer(bin_instance).data,
+            'mqtt_published': mqtt_success
+        }
+        
+        if not mqtt_success:
+            logger.warning(f"MQTT publish failed but bin state updated. This is OK for testing.")
+            response_data['warning'] = 'MQTT command failed, but bin state updated'
+        
+        return Response(response_data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['post'], url_path='close')
+    @action(detail=True, methods=['post'], url_path='close', permission_classes=[permissions.AllowAny])
     def close_bin(self, request, id=None):
         """
         Close a specific bin
         POST /api/bins/{id}/close/
+        Note: AllowAny for Node-RED and IoT device integration
         """
         bin_instance = self.get_object()
         
@@ -162,12 +194,13 @@ class BinViewSet(viewsets.ModelViewSet):
                 'error': 'Failed to send close command to bin'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'], url_path='update-fill-level')
+    @action(detail=True, methods=['post'], url_path='update-fill-level', permission_classes=[permissions.AllowAny])
     def update_fill_level(self, request, pk=None):
         """
         Update bin fill level
         POST /api/bins/{id}/update-fill-level/
         Body: {"fill_level": 75}
+        Note: AllowAny for IoT sensors and automated systems
         """
         bin_instance = self.get_object()
         serializer = UpdateFillLevelSerializer(data=request.data)

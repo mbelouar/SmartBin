@@ -31,27 +31,74 @@ class BinUsageLogSerializer(serializers.ModelSerializer):
 
 class OpenBinSerializer(serializers.Serializer):
     """Serializer for opening a bin"""
+    user_nfc_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text="User's NFC code (obtained from their app)"
+    )
     user_qr_code = serializers.CharField(
-        required=True,
-        help_text="User's QR code (obtained from scanning their app)"
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text="User's QR code (deprecated, use user_nfc_code instead)"
     )
     nfc_tag_id = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
         help_text="NFC tag ID scanned from the bin (for proximity verification)"
     )
     
-    def validate_user_qr_code(self, value):
-        """Validate QR code format"""
+    def validate(self, data):
+        """Validate that at least one user identifier is provided"""
+        user_nfc_code = data.get('user_nfc_code')
+        user_qr_code = data.get('user_qr_code')
+        
+        if not user_nfc_code and not user_qr_code:
+            raise serializers.ValidationError("Either user_nfc_code or user_qr_code must be provided")
+        
+        # Prefer user_nfc_code if both are provided
+        if user_nfc_code:
+            data['user_nfc_code'] = user_nfc_code.strip() if isinstance(user_nfc_code, str) else str(user_nfc_code).strip()
+        if user_qr_code:
+            data['user_qr_code'] = user_qr_code.strip() if isinstance(user_qr_code, str) else str(user_qr_code).strip()
+        
+        return data
+    
+    def validate_user_nfc_code(self, value):
+        """Validate NFC code format"""
+        if not value:
+            return None
+        value = value.strip() if isinstance(value, str) else str(value).strip()
         if not value.startswith('SB-'):
-            raise serializers.ValidationError("Invalid QR code format. Must start with 'SB-'")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"User NFC code doesn't start with 'SB-': {value}. Allowing for compatibility.")
+        return value
+    
+    def validate_user_qr_code(self, value):
+        """Validate QR code format (deprecated, kept for backward compatibility)"""
+        if not value:
+            return None
+        value = value.strip() if isinstance(value, str) else str(value).strip()
+        if not value.startswith('SB-'):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"User QR code doesn't start with 'SB-': {value}. Allowing for compatibility.")
         return value
     
     def validate_nfc_tag_id(self, value):
         """Validate NFC tag format"""
+        if not value:
+            return None  # Allow None/empty
+        value = value.strip() if isinstance(value, str) else str(value).strip()
         if value and not value.startswith('NFC-'):
-            raise serializers.ValidationError("Invalid NFC tag format. Must start with 'NFC-'")
-        return value
+            # Log warning but allow it for testing
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"NFC tag doesn't start with 'NFC-': {value}. Allowing for compatibility.")
+        return value if value else None
 
 
 class CloseBinSerializer(serializers.Serializer):

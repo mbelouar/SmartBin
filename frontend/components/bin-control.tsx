@@ -14,9 +14,10 @@ interface BinControlProps {
   bin: Bin
   onClose: () => void
   onTrashDeposited: () => void
+  userNfcCode?: string | null
 }
 
-export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) {
+export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinControlProps) {
   const [waitingForNfc, setWaitingForNfc] = useState(false)
   const [nfcScanned, setNfcScanned] = useState(false)
   const [scannedNfcTag, setScannedNfcTag] = useState<string | null>(null)
@@ -112,16 +113,23 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
     console.log("[User] Waiting for NFC scan from Node-RED...")
 
     try {
-      // Tell Node-RED which bin the user selected
+      // Tell Node-RED which bin the user selected, including their NFC code
+      if (!userNfcCode) {
+        console.error("User NFC code not available. Cannot proceed with NFC.")
+        return
+      }
+      
       await fetch('http://localhost:1880/nfc/select-bin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bin_id: bin.id,
           bin_name: bin.name,
-          nfc_tag_id: bin.nfc_tag_id
+          nfc_tag_id: bin.nfc_tag_id,
+          user_nfc_code: userNfcCode // Send the actual user's NFC code
         })
       })
+      console.log("[User] Sent NFC code to Node-RED:", userNfcCode)
     } catch (error) {
       console.error("Error selecting bin:", error)
     }
@@ -153,7 +161,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                   }
                 } catch (error) {
                   console.error("[NFC] Error checking bin status:", error)
-                }
+    }
               }, 500)
             }
           }
@@ -202,9 +210,9 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
       
       // Close bin after animation
       setTimeout(() => {
-        handleClose()
+      handleClose()
         setTimeout(() => {
-          onClose()
+      onClose()
         }, 500)
       }, 2500)
     }, 2000) // 2 second delay
@@ -251,7 +259,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
               
               <CardHeader className="relative z-10 p-0 border-0">
-                <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <motion.div
                       initial={{ scale: 0, rotate: -180 }}
@@ -261,18 +269,18 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     >
                       <Trash2 className="w-6 h-6 text-white drop-shadow-lg" />
                     </motion.div>
-                    <div>
+              <div>
                       <CardTitle className="text-xl font-bold text-white mb-1 drop-shadow-lg">
-                        {bin.name}
-                      </CardTitle>
+                  {bin.name}
+                </CardTitle>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-white/90" />
                         <span className="text-xs text-white/90 font-medium">
                           {bin.location}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  </span>
+                </div>
+              </div>
+            </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -280,9 +288,9 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     className="h-8 w-8 rounded-full hover:bg-white/20 text-white hover:text-white border border-white/20 backdrop-blur-sm transition-all"
                   >
                     <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardHeader>
+            </Button>
+          </div>
+        </CardHeader>
             </div>
 
             <CardContent className="p-4 space-y-4">
@@ -301,8 +309,8 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                 <div className="glass rounded-lg p-3 border border-border/50 bg-gradient-to-br from-accent/10 to-accent/5">
                   <p className="text-xs text-muted-foreground font-medium mb-1.5">Fill Level</p>
                   <p className="text-base font-bold text-foreground">{bin.fill_level}%</p>
-                </div>
-              </div>
+            </div>
+          </div>
 
               {/* Fill Level Progress */}
               <div className="space-y-2 glass rounded-lg p-3 border border-border/50 bg-gradient-to-br from-muted/30 to-muted/10">
@@ -311,7 +319,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                   <span className={`text-xl font-bold bg-gradient-to-r ${getStatusColor()} bg-clip-text text-transparent`}>
                     {bin.fill_level}%
                   </span>
-                </div>
+            </div>
                 <div className="relative">
                   <Progress 
                     value={bin.fill_level} 
@@ -323,7 +331,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                     animate={{ width: `${bin.fill_level}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                   />
-                </div>
+          </div>
               </div>
 
               {/* Detection Status */}
@@ -345,7 +353,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         >
                           <Clock className="w-6 h-6 text-blue-500 relative z-10" />
                         </motion.div>
-                        <div className="text-center relative z-10">
+              <div className="text-center relative z-10">
                           <p className="text-xs text-muted-foreground font-medium mb-0.5">Waiting for Node-RED detection</p>
                           <p className="text-sm font-semibold text-blue-400">
                             Trigger detection from Node-RED
@@ -367,9 +375,9 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         <div className="text-center relative z-10">
                           <p className="text-xs text-muted-foreground font-medium mb-0.5">Trash detected!</p>
                           <p className="text-sm font-bold text-green-500">Processing...</p>
-                        </div>
-                      </div>
-                    )}
+              </div>
+            </div>
+          )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -517,50 +525,50 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                 )}
               </AnimatePresence>
 
-              {/* Control Buttons */}
-              <div className="space-y-3">
+          {/* Control Buttons */}
+          <div className="space-y-3">
                 <AnimatePresence mode="wait">
-                  {!isOpen ? (
+            {!isOpen ? (
                     <motion.div
                       key="open"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                     >
-                      <Button
+              <Button
                         onClick={handleUseNfc}
                         disabled={!canOpen || waitingForNfc}
                         className="w-full h-12 text-base font-semibold gap-2 bg-gradient-to-r from-primary via-accent to-secondary hover:from-primary/90 hover:via-accent/90 hover:to-secondary/90 text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        size="lg"
-                      >
+                size="lg"
+              >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         <Unlock className="w-5 h-5 relative z-10" />
                         <span className="relative z-10">{waitingForNfc ? "Waiting for NFC..." : "Use NFC"}</span>
-                      </Button>
+              </Button>
                     </motion.div>
-                  ) : (
+            ) : (
                     <motion.div
                       key="close"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                     >
-                      <Button
-                        onClick={handleClose}
-                        variant="outline"
+                <Button
+                  onClick={handleClose}
+                  variant="outline"
                         disabled={isDetecting}
                         className="w-full h-11 gap-2 bg-transparent border-2 border-border hover:bg-muted/50 hover:border-primary/30 transition-all duration-300 font-semibold disabled:opacity-50"
-                        size="lg"
-                      >
+                  size="lg"
+                >
                         <Lock className="w-4 h-4" />
-                        Close Bin
-                      </Button>
+                  Close Bin
+                </Button>
                     </motion.div>
-                  )}
+            )}
                 </AnimatePresence>
-              </div>
+          </div>
 
-              {/* Info Message */}
+          {/* Info Message */}
               {!statusMessage && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -588,7 +596,7 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         : "Ready to use"}
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {isOpen
+            {isOpen
                         ? (isDetecting 
                             ? "Node-RED detected your deposit. Points will be awarded automatically!"
                             : "Bin is open. Trigger detection from Node-RED to simulate trash deposit and award points.")
@@ -596,11 +604,11 @@ export function BinControl({ bin, onClose, onTrashDeposited }: BinControlProps) 
                         ? "Go to Node-RED and click 'Simulate: User Taps NFC' to verify you're near this bin. Bin will open automatically after verification."
                         : "Click 'Use NFC' then scan NFC tag from Node-RED. Bin will open automatically."}
                     </p>
-                  </div>
+          </div>
                 </motion.div>
               )}
-            </CardContent>
-          </Card>
+        </CardContent>
+      </Card>
         </motion.div>
       </motion.div>
     </AnimatePresence>

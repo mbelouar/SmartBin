@@ -33,10 +33,10 @@ class ReclamationViewSet(viewsets.ModelViewSet):
         """Filter reclamations by various parameters"""
         queryset = super().get_queryset()
         
-        # Filter by user QR code
-        user_qr = self.request.query_params.get('user_qr_code', None)
-        if user_qr:
-            queryset = queryset.filter(user_qr_code=user_qr)
+        # Filter by user NFC code (support both old and new for backward compatibility)
+        user_nfc = self.request.query_params.get('user_nfc_code') or self.request.query_params.get('user_qr_code')
+        if user_nfc:
+            queryset = queryset.filter(user_nfc_code=user_nfc)
         
         # Filter by bin_id
         bin_id = self.request.query_params.get('bin_id', None)
