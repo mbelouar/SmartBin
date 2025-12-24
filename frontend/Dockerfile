@@ -4,16 +4,13 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Copy package files first for better layer caching
+COPY package.json package-lock.json* ./
 
-# Copy package files and pnpm config first for better layer caching
-COPY package.json pnpm-lock.yaml* .npmrc* ./
+# Install dependencies using npm (more reliable in Docker)
+RUN npm ci || npm install
 
-# Install dependencies (install all, including devDependencies for build)
-RUN pnpm install --frozen-lockfile
-
-# Copy all remaining files (excluding what's in .dockerignore)
+# Copy all remaining source files
 COPY . .
 
 # Set environment variables for build
@@ -33,7 +30,7 @@ ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=$NEXT_PUBLIC_DETECTION_SERVICE_URL
 ENV NEXT_PUBLIC_RECLAMATION_SERVICE_URL=$NEXT_PUBLIC_RECLAMATION_SERVICE_URL
 
 # Build the Next.js application
-RUN pnpm run build
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
