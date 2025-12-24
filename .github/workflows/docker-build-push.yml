@@ -44,6 +44,11 @@ jobs:
           tags: ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }},${{ env.IMAGE_PREFIX }}-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
+            NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
+            NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
+            NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
 
       - name: Build and push Gateway
         uses: docker/build-push-action@v5

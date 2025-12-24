@@ -4,28 +4,49 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Install pnpm globally
+RUN npm install -g pnpm
 
-# Install pnpm and dependencies (no frozen lockfile for development)
-RUN npm install -g pnpm && \
-    pnpm install --no-frozen-lockfile
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies with frozen lockfile for reproducible builds
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Install pnpm globally
+RUN npm install -g pnpm
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Copy all source files
 COPY . .
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Build arguments for environment variables (with defaults)
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
+ARG NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
+ARG NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
+ARG NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
+
+# Set as environment variables for build
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
+ENV NEXT_PUBLIC_BIN_SERVICE_URL=$NEXT_PUBLIC_BIN_SERVICE_URL
+ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=$NEXT_PUBLIC_DETECTION_SERVICE_URL
+ENV NEXT_PUBLIC_RECLAMATION_SERVICE_URL=$NEXT_PUBLIC_RECLAMATION_SERVICE_URL
+
 # Build the Next.js application
-RUN npm install -g pnpm && \
-    pnpm run build
+RUN pnpm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
