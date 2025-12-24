@@ -6,9 +6,6 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
-// Force dynamic rendering to avoid build-time errors with Clerk
-export const dynamic = 'force-dynamic'
-
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 
@@ -34,6 +31,7 @@ export default function RootLayout({
       afterSignUpUrl="/dashboard"
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy_key_for_build_only'}
     >
       <html lang="en" className="dark">
         <body className={`${spaceGrotesk.className} font-sans antialiased`}>

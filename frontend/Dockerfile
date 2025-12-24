@@ -11,21 +11,9 @@ COPY package.json package-lock.json* ./
 # Use --legacy-peer-deps for better compatibility with React 19
 RUN npm install --legacy-peer-deps --verbose
 
-# Copy configuration files (including any hidden ones)
-COPY tsconfig.json next.config.mjs postcss.config.mjs components.json .npmrc* ./
-
-# Copy public directory
-COPY public ./public
-
-# Copy source directories
-COPY app ./app
-COPY components ./components
-COPY hooks ./hooks
-COPY lib ./lib
-COPY styles ./styles
-
-# Copy root-level TypeScript/JS files
-COPY middleware.ts next-env.d.ts* ./
+# Copy all remaining files (excluding what's in .dockerignore)
+# This is more reliable than copying individual directories
+COPY . .
 
 # Verify lib directory exists (for debugging)
 RUN ls -la lib/ || echo "WARNING: lib directory not found!"
