@@ -8,16 +8,30 @@ WORKDIR /app
 # Install pnpm (same as local setup)
 RUN npm install -g pnpm
 
-# Copy package files first (for better caching)
-COPY package.json pnpm-lock.yaml .npmrc ./
+# Copy package files and config first (for better caching)
+COPY package.json pnpm-lock.yaml ./
+
+# Copy .npmrc for pnpm hoisting (critical for module resolution)
+COPY .npmrc ./
 
 # Install dependencies (same command as local)
-RUN pnpm install
+# Using --shamefully-hoist via .npmrc to match local behavior
+RUN pnpm install --frozen-lockfile
 
-# Copy all source files
-COPY . .
+# Copy source files explicitly (avoiding node_modules which is in .dockerignore)
+COPY app ./app
+COPY components ./components
+COPY hooks ./hooks
+COPY lib ./lib
+COPY styles ./styles
+COPY public ./public
+COPY tsconfig.json next.config.mjs postcss.config.mjs components.json middleware.ts next-env.d.ts* ./
 
-# Set environment variables for build
+# Verify critical files exist
+RUN test -d lib && test -d app && test -d components && echo "✓ Source files copied" || (echo "✗ Missing source files!" && exit 1)
+RUN test -d node_modules/next && test -d node_modules/react && echo "✓ Dependencies available" || (echo "✗ Dependencies missing!" && exit 1)
+
+# Set environment variables for build (BEFORE build command)
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -29,7 +43,7 @@ ARG NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy
 ARG CLERK_SECRET_KEY=sk_test_dummy
 
-# Set as environment variables
+# Set as environment variables (must be set before build)
 ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
 ENV NEXT_PUBLIC_BIN_SERVICE_URL=$NEXT_PUBLIC_BIN_SERVICE_URL
 ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=$NEXT_PUBLIC_DETECTION_SERVICE_URL
