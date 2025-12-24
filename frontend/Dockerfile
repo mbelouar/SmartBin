@@ -18,18 +18,9 @@ COPY .npmrc ./
 # Using --shamefully-hoist via .npmrc to match local behavior
 RUN pnpm install --frozen-lockfile
 
-# Copy source files explicitly (avoiding node_modules which is in .dockerignore)
-COPY app ./app
-COPY components ./components
-COPY hooks ./hooks
-COPY lib ./lib
-COPY styles ./styles
-COPY public ./public
-COPY tsconfig.json next.config.mjs postcss.config.mjs components.json middleware.ts next-env.d.ts* ./
-
-# Verify critical files exist
-RUN test -d lib && test -d app && test -d components && echo "✓ Source files copied" || (echo "✗ Missing source files!" && exit 1)
-RUN test -d node_modules/next && test -d node_modules/react && echo "✓ Dependencies available" || (echo "✗ Dependencies missing!" && exit 1)
+# Copy all remaining source files
+# .dockerignore will exclude node_modules, .next, etc.
+COPY . .
 
 # Set environment variables for build (BEFORE build command)
 ENV NEXT_TELEMETRY_DISABLED=1
