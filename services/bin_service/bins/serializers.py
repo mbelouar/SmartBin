@@ -12,7 +12,7 @@ class BinSerializer(serializers.ModelSerializer):
             'capacity', 'fill_level', 'status', 'is_open',
             'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'qr_code', 'nfc_tag_id', 'is_open', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'qr_code', 'nfc_tag_id', 'is_open', 'fill_level', 'last_opened_at', 'last_emptied_at', 'created_at', 'updated_at']
 
 
 class BinUsageLogSerializer(serializers.ModelSerializer):
@@ -109,3 +109,25 @@ class CloseBinSerializer(serializers.Serializer):
 class UpdateFillLevelSerializer(serializers.Serializer):
     """Serializer for updating bin fill level"""
     fill_level = serializers.IntegerField(min_value=0, max_value=100)
+
+
+class IncrementFillLevelSerializer(serializers.Serializer):
+    """Serializer for incrementing bin fill level"""
+    increment = serializers.IntegerField(
+        min_value=1, 
+        max_value=50,
+        default=5,
+        help_text="Percentage to increment fill level (default: 5%)"
+    )
+
+
+class AddTrashSerializer(serializers.Serializer):
+    """Serializer for adding trash to bin (tracks actual liters)"""
+    liters = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0.1,
+        max_value=100.0,
+        default=5.0,
+        help_text="Liters of trash to add (default: 5.0L per deposit)"
+    )

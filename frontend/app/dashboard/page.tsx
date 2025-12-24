@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { LayoutGrid, Map, Sparkles, LogOut, User } from "lucide-react"
 import { useClerkApi } from "@/hooks/use-clerk-api"
 import { isAdminUser } from "@/lib/utils"
-import { authApi } from "@/lib/api"
+import { authApi, binApi } from "@/lib/api"
 import type { Bin } from "@/lib/types"
 
 export default function DashboardPage() {
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [points, setPoints] = useState<number | null>(null)
   const [loadingPoints, setLoadingPoints] = useState(true)
   const [userNfcCode, setUserNfcCode] = useState<string | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Fetch user points and NFC code from backend
   useEffect(() => {
@@ -81,7 +82,14 @@ export default function DashboardPage() {
     setSelectedBin(null)
   }
 
+  const handleBinUpdate = (updatedBin: Bin) => {
+    setSelectedBin(updatedBin)
+  }
+
   const handleTrashDeposited = async () => {
+    // Trigger dashboard refresh
+    setRefreshTrigger(prev => prev + 1)
+    
     // Points are awarded by the detection service via MQTT
     // Refresh user points with retries to ensure we get the updated balance
     if (user?.id) {
@@ -119,6 +127,9 @@ export default function DashboardPage() {
       // Start refreshing after a short delay
       refreshPoints(3, 1500) // 3 retries with 1.5 second delay between each
     }
+    
+    // Also refresh the selected bin if it exists (BinControl will handle its own refresh)
+    // Just trigger the dashboard refresh to update the bin list
   }
 
   const handleLogout = async () => {
@@ -226,14 +237,14 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className={`container mx-auto px-4 ${view === "map" ? "flex-1 min-h-0 flex flex-col pb-0" : "pb-8"}`}>
         {view === "dashboard" ? (
-          <DashboardView onBinSelect={handleBinSelect} />
+          <DashboardView onBinSelect={handleBinSelect} refreshTrigger={refreshTrigger} />
         ) : (
           <MapView onBinSelect={handleBinSelect} selectedBin={selectedBin} />
         )}
       </main>
 
       {/* Bin Control Modal */}
-      {selectedBin && <BinControl bin={selectedBin} onClose={handleBinClose} onTrashDeposited={handleTrashDeposited} userNfcCode={userNfcCode} />}
+      {selectedBin && <BinControl bin={selectedBin} onClose={handleBinClose} onTrashDeposited={handleTrashDeposited} onBinUpdate={handleBinUpdate} userNfcCode={userNfcCode} />}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import { useAuth, useUser } from "@clerk/nextjs"
 import { AdminDashboard } from "@/components/admin-dashboard"
 import { SmartBinLogo } from "@/components/smartbin-logo"
 import { Button } from "@/components/ui/button"
-import { Home, LogOut, User } from "lucide-react"
+import { LogOut, User } from "lucide-react"
 import { isAdminUser } from "@/lib/utils"
 import { useClerkApi } from "@/hooks/use-clerk-api"
 
@@ -76,16 +76,6 @@ export default function AdminPage() {
                   <span className="text-xs text-primary font-semibold ml-1">(Admin)</span>
                 </div>
               )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/")}
-                className="gap-2 border-primary/30 hover:bg-primary/10"
-              >
-                <Home className="w-4 h-4" />
-                Home
-              </Button>
 
               <Button
                 variant="outline"

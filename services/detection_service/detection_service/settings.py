@@ -134,6 +134,9 @@ MQTT_KEEPALIVE = 60
 # Auth Service URL (for adding points)
 AUTH_SERVICE_URL = os.environ.get('AUTH_SERVICE_URL', 'http://localhost:8001')
 
+# Bin Service URL (for updating bin capacity)
+BIN_SERVICE_URL = os.environ.get('BIN_SERVICE_URL', 'http://localhost:8002')
+
 # Points Configuration
 POINTS_CONFIG = {
     'plastic': 15,

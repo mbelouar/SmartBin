@@ -9,7 +9,9 @@ from .serializers import (
     BinUsageLogSerializer,
     OpenBinSerializer,
     CloseBinSerializer,
-    UpdateFillLevelSerializer
+    UpdateFillLevelSerializer,
+    IncrementFillLevelSerializer,
+    AddTrashSerializer
 )
 from .permissions import IsAdminOrReadOnly
 from mqtt.mqtt_client import mqtt_client
@@ -129,6 +131,16 @@ class BinViewSet(viewsets.ModelViewSet):
         # Check if bin is active
         if bin_instance.status != 'active':
             logger.warning(f"Bin {bin_instance.id} is not active, status: {bin_instance.status}")
+            
+            # If bin is full, provide specific error message
+            if bin_instance.status == 'full':
+                return Response({
+                    'error': 'Bin is full and cannot accept more trash',
+                    'detail': f'This bin is at {bin_instance.fill_level}% capacity. Please use another bin.',
+                    'fill_level': bin_instance.fill_level,
+                    'status': bin_instance.status
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
             return Response({
                 'error': f'Bin is not available. Status: {bin_instance.status}'
             }, status=status.HTTP_400_BAD_REQUEST)
@@ -195,22 +207,117 @@ class BinViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=True, methods=['post'], url_path='update-fill-level', permission_classes=[permissions.AllowAny])
-    def update_fill_level(self, request, pk=None):
+    def update_fill_level(self, request, id=None, **kwargs):
         """
-        Update bin fill level
-        POST /api/bins/{id}/update-fill-level/
-        Body: {"fill_level": 75}
-        Note: AllowAny for IoT sensors and automated systems
+        Update bin fill level or increment it
+        POST /api/bins/list/{id}/update-fill-level/
+        Body: {"fill_level": 75} OR {"increment": 5}
+        Note: AllowAny for IoT sensors, Detection Service, and automated systems
         """
         bin_instance = self.get_object()
+
+        # Check if it's an increment request
+        if 'increment' in request.data:
+            increment = request.data.get('increment', 5)
+
+            logger.info(f"📊 Incrementing fill level for bin {bin_instance.id} by {increment}%")
+            logger.info(f"   Current fill level: {bin_instance.fill_level}%")
+
+            # Save previous level before update
+            previous_level = bin_instance.fill_level
+
+            # Calculate new fill level
+            new_fill_level = min(previous_level + increment, 100)
+
+            # Update fill level
+            bin_instance.update_fill_level(new_fill_level)
+
+            logger.info(f"✅ Fill level updated: {bin_instance.fill_level}% (Status: {bin_instance.status})")
+
+            return Response({
+                'message': 'Fill level incremented successfully',
+                'previous_level': previous_level,
+                'fill_level': bin_instance.fill_level,
+                'increment': increment,
+                'status': bin_instance.status,
+                'bin': BinSerializer(bin_instance).data
+            }, status=status.HTTP_200_OK)
+
+        # Otherwise, set absolute fill level
         serializer = UpdateFillLevelSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             fill_level = serializer.validated_data['fill_level']
             bin_instance.update_fill_level(fill_level)
-            
+
             return Response({
                 'message': 'Fill level updated successfully',
+                'bin': BinSerializer(bin_instance).data
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'], url_path='add-trash', permission_classes=[permissions.AllowAny])
+    def add_trash(self, request, id=None, **kwargs):
+        """
+        Add trash to bin (converts liters to percentage)
+        POST /api/bins/list/{id}/add-trash/
+        Body: {"liters": 5.0}
+        Note: AllowAny for IoT sensors, Detection Service, and automated systems
+        """
+        bin_instance = self.get_object()
+        
+        serializer = AddTrashSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            liters = serializer.validated_data.get('liters', 5.0)
+            
+            # Calculate capacity used in liters from current fill level
+            current_capacity_used = (bin_instance.fill_level / 100) * bin_instance.capacity
+            
+            logger.info(f"🗑️ Adding {liters}L of trash to bin {bin_instance.id}")
+            logger.info(f"   Current: {current_capacity_used:.1f}L / {bin_instance.capacity}L ({bin_instance.fill_level}%)")
+            
+            # Store previous values
+            previous_capacity_used = current_capacity_used
+            previous_fill_level = bin_instance.fill_level
+            
+            # Add trash to bin (this updates fill_level and status)
+            success = bin_instance.add_trash(liters=float(liters))
+            
+            # Refresh from database to get updated values
+            bin_instance.refresh_from_db()
+            
+            # Calculate new capacity used
+            new_capacity_used = (bin_instance.fill_level / 100) * bin_instance.capacity
+            
+            logger.info(f"✅ Trash added: {new_capacity_used:.1f}L / {bin_instance.capacity}L ({bin_instance.fill_level}%, Status: {bin_instance.status})")
+            
+            if not success:
+                # Bin is now full
+                logger.warning(f"⚠️ Bin {bin_instance.id} is now full!")
+                return Response({
+                    'message': 'Trash added but bin is now full',
+                    'warning': 'Bin has reached full capacity',
+                    'previous_capacity_used': round(previous_capacity_used, 1),
+                    'current_capacity_used': round(new_capacity_used, 1),
+                    'capacity': bin_instance.capacity,
+                    'previous_fill_level': previous_fill_level,
+                    'fill_level': bin_instance.fill_level,
+                    'liters_added': float(liters),
+                    'status': bin_instance.status,
+                    'bin': BinSerializer(bin_instance).data
+                }, status=status.HTTP_200_OK)
+            
+            return Response({
+                'message': 'Trash added successfully',
+                'previous_capacity_used': round(previous_capacity_used, 1),
+                'current_capacity_used': round(new_capacity_used, 1),
+                'capacity': bin_instance.capacity,
+                'previous_fill_level': previous_fill_level,
+                'fill_level': bin_instance.fill_level,
+                'liters_added': float(liters),
+                'status': bin_instance.status,
                 'bin': BinSerializer(bin_instance).data
             }, status=status.HTTP_200_OK)
         

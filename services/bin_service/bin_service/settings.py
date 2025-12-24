@@ -20,14 +20,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Allow all hosts including Docker service names
-ALLOWED_HOSTS = [
-    '*',
-    'localhost',
-    '127.0.0.1',
-    'bin_service',
-    'bin-service',
-    '.localhost',
-]
+USE_X_FORWARDED_HOST = False
+ALLOWED_HOSTS = ['*']  # Simplified: allow all hosts
 
 # Application definition
 INSTALLED_APPS = [

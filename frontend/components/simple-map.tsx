@@ -693,9 +693,9 @@ export function SimpleMap({
                                         </p>
                                       </div>
                                       <div className="space-y-1">
-                                        <p className="text-muted-foreground">QR Code</p>
+                                        <p className="text-muted-foreground">NFC Tag</p>
                                         <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
-                                          {bin.qr_code}
+                                          {bin.nfc_tag_id}
                                         </p>
                                         <p className="text-muted-foreground mt-2">Status</p>
                                         <p className="font-semibold capitalize">{bin.status}</p>

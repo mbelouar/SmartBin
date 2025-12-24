@@ -1,5 +1,9 @@
 version: '3.8'
 
+# Production docker-compose file using Docker Hub images
+# Set DOCKERHUB_USERNAME environment variable or replace <your-dockerhub-username> below
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
 services:
   # MySQL Database
   mysql:
@@ -22,6 +26,7 @@ services:
       timeout: 5s
       retries: 5
     command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
 
   # MQTT Broker (Mosquitto)
   mosquitto:
@@ -42,18 +47,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Auth Service
   auth_service:
-    build:
-      context: ./services/auth_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-auth-service:latest
     container_name: smartbin_auth
     environment:
       - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/auth_db
-      - SECRET_KEY=your-secret-key-change-in-production
-      - DEBUG=True
-      - CLERK_SECRET_KEY=sk_test_SsMW9j9gVmBDdDidssxbmV82lERokmG4Gki44sKZNi
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
     ports:
       - "8001:8000"
     depends_on:
@@ -61,25 +65,22 @@ services:
         condition: service_healthy
     networks:
       - smartbin_network
-    volumes:
-      - ./services/auth_service:/app
     command: >
       sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
 
   # Bin Service
   bin_service:
-    build:
-      context: ./services/bin_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-bin-service:latest
     container_name: smartbin_bin_service
     environment:
       - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/bin_db
-      - SECRET_KEY=your-secret-key-change-in-production
-      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
-      - CLERK_SECRET_KEY=sk_test_SsMW9j9gVmBDdDidssxbmV82lERokmG4Gki44sKZNi
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
     ports:
       - "8002:8000"
     depends_on:
@@ -89,22 +90,19 @@ services:
         condition: service_healthy
     networks:
       - smartbin_network
-    volumes:
-      - ./services/bin_service:/app
     command: >
       sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
 
   # Detection Service
   detection_service:
-    build:
-      context: ./services/detection_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-detection-service:latest
     container_name: smartbin_detection
     environment:
       - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/detection_db
-      - SECRET_KEY=your-secret-key-change-in-production
-      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
       - AUTH_SERVICE_URL=http://gateway:8000
@@ -118,20 +116,17 @@ services:
         condition: service_healthy
     networks:
       - smartbin_network
-    volumes:
-      - ./services/detection_service:/app
     command: sh /app/start.sh
+    restart: unless-stopped
 
   # Reclamation Service
   reclamation_service:
-    build:
-      context: ./services/reclamation_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-reclamation-service:latest
     container_name: smartbin_reclamation
     environment:
       - DATABASE_URL=mysql://smartbin_user:smartbin_pass@mysql:3306/reclamation_db
-      - SECRET_KEY=your-secret-key-change-in-production
-      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
     ports:
       - "8004:8000"
     depends_on:
@@ -139,25 +134,22 @@ services:
         condition: service_healthy
     networks:
       - smartbin_network
-    volumes:
-      - ./services/reclamation_service:/app
     command: >
       sh -c "python manage.py migrate --fake-initial || python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
 
   # API Gateway
   gateway:
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-gateway:latest
     container_name: smartbin_gateway
     environment:
       - AUTH_SERVICE_URL=http://auth_service:8000
       - BIN_SERVICE_URL=http://bin_service:8000
       - DETECTION_SERVICE_URL=http://detection_service:8000
       - RECLAMATION_SERVICE_URL=http://reclamation_service:8000
-      - SECRET_KEY=your-secret-key-change-in-production
-      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-False}
     ports:
       - "8000:8000"
     depends_on:
@@ -167,14 +159,11 @@ services:
       - reclamation_service
     networks:
       - smartbin_network
-    volumes:
-      - ./gateway:/app
+    restart: unless-stopped
 
   # Node-RED
   node_red:
-    build:
-      context: ./node-red
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-node-red:latest
     container_name: smartbin_nodered
     environment:
       - TZ=UTC
@@ -182,42 +171,39 @@ services:
     ports:
       - "1880:1880"
     volumes:
-      - ./node-red/data:/data
+      - node_red_data:/data
     networks:
       - smartbin_network
     depends_on:
       mosquitto:
         condition: service_healthy
+    restart: unless-stopped
 
   # Frontend (Next.js Web UI)
   frontend:
-    image: node:20-alpine
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/smartbin-frontend:latest
     container_name: smartbin_frontend
-    working_dir: /app
     environment:
-      - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
-      - NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
-      - NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
-      - NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
-      - NODE_ENV=development
+      - NEXT_PUBLIC_AUTH_SERVICE_URL=${NEXT_PUBLIC_AUTH_SERVICE_URL:-http://localhost:8001}
+      - NEXT_PUBLIC_BIN_SERVICE_URL=${NEXT_PUBLIC_BIN_SERVICE_URL:-http://localhost:8002}
+      - NEXT_PUBLIC_DETECTION_SERVICE_URL=${NEXT_PUBLIC_DETECTION_SERVICE_URL:-http://localhost:8003}
+      - NEXT_PUBLIC_RECLAMATION_SERVICE_URL=${NEXT_PUBLIC_RECLAMATION_SERVICE_URL:-http://localhost:8004}
+      - NODE_ENV=production
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
     depends_on:
       - auth_service
       - bin_service
       - detection_service
       - reclamation_service
+      - gateway
     networks:
       - smartbin_network
-    command: sh -c "npm install -g pnpm && pnpm install && pnpm run dev"
+    restart: unless-stopped
 
   # phpMyAdmin - Database Visualization Tool
   phpmyadmin:
-    image: arm64v8/phpmyadmin:latest
+    image: phpmyadmin/phpmyadmin:latest
     container_name: smartbin_phpmyadmin
     environment:
       PMA_HOST: mysql
@@ -232,6 +218,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    restart: unless-stopped
 
 networks:
   smartbin_network:
@@ -241,3 +228,5 @@ volumes:
   mysql_data:
   mosquitto_data:
   mosquitto_logs:
+  node_red_data:
+

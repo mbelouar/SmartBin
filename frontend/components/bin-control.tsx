@@ -14,10 +14,11 @@ interface BinControlProps {
   bin: Bin
   onClose: () => void
   onTrashDeposited: () => void
+  onBinUpdate?: (updatedBin: Bin) => void
   userNfcCode?: string | null
 }
 
-export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinControlProps) {
+export function BinControl({ bin, onClose, onTrashDeposited, onBinUpdate, userNfcCode }: BinControlProps) {
   const [waitingForNfc, setWaitingForNfc] = useState(false)
   const [nfcScanned, setNfcScanned] = useState(false)
   const [scannedNfcTag, setScannedNfcTag] = useState<string | null>(null)
@@ -26,32 +27,38 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
   const [isDetecting, setIsDetecting] = useState(false)
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null)
   const [showPointsAnimation, setShowPointsAnimation] = useState(false)
+  const [currentBin, setCurrentBin] = useState<Bin>(bin)
+
+  // Update currentBin when bin prop changes
+  useEffect(() => {
+    setCurrentBin(bin)
+  }, [bin])
+
+  // No periodic refresh - only refresh when trash is detected
 
   // Debug: Log props when component mounts/updates
   useEffect(() => {
     console.log("🔍 BinControl mounted/updated")
-    console.log("   Bin:", bin.name, bin.id)
+    console.log("   Bin:", currentBin.name, currentBin.id)
+    console.log("   Fill Level:", currentBin.fill_level)
     console.log("   User NFC Code prop:", userNfcCode)
-    console.log("   Type:", typeof userNfcCode)
-    console.log("   Is null?", userNfcCode === null)
-    console.log("   Is undefined?", userNfcCode === undefined)
-  }, [bin, userNfcCode])
+  }, [currentBin, userNfcCode])
 
   // Check if bin can be opened (memoized to prevent re-renders)
   const { canOpen, statusMessage } = useMemo(() => {
-    if (bin.status === "full" || bin.fill_level >= 90) {
+    if (currentBin.status === "full" || currentBin.fill_level >= 90) {
       return {
         canOpen: false,
         statusMessage: "This bin is full and cannot accept more waste. Please use another bin."
       }
     }
-    if (bin.status === "maintenance") {
+    if (currentBin.status === "maintenance") {
       return {
         canOpen: false,
         statusMessage: "This bin is currently under maintenance and temporarily unavailable. Please use another bin."
       }
     }
-    if (bin.status === "inactive") {
+    if (currentBin.status === "inactive") {
       return {
         canOpen: false,
         statusMessage: "This bin is currently inactive and cannot be used. Please use another bin."
@@ -61,7 +68,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
       canOpen: true,
       statusMessage: null
     }
-  }, [bin.status, bin.fill_level])
+  }, [currentBin.status, currentBin.fill_level])
 
   // Countdown timer (informational only - won't auto-close)
   useEffect(() => {
@@ -94,7 +101,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
           const recentDetection = detections.results?.find(
             (d: any) => {
               const detectionTime = new Date(d.created_at || d.detected_at).getTime()
-              return d.bin_id === bin.id && detectionTime >= openedAt
+              return d.bin_id === currentBin.id && detectionTime >= openedAt
             }
           )
           
@@ -110,7 +117,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
 
       return () => clearInterval(pollInterval)
     }
-  }, [isOpen, isDetecting, showPointsAnimation, bin.id])
+  }, [isOpen, isDetecting, showPointsAnimation, currentBin.id])
 
   // Tell Node-RED which bin user selected
   const handleUseNfc = async () => {
@@ -127,15 +134,15 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
     }
 
     setWaitingForNfc(true)
-    console.log("[User] Selected bin:", bin.name, bin.id)
+    console.log("[User] Selected bin:", currentBin.name, currentBin.id)
     console.log("[User] Waiting for NFC scan from Node-RED...")
     console.log("[User] 🔑 User NFC Code:", userNfcCode)
 
     try {
       const payload = {
-        bin_id: bin.id,
-        bin_name: bin.name,
-        nfc_tag_id: bin.nfc_tag_id,
+        bin_id: currentBin.id,
+        bin_name: currentBin.name,
+        nfc_tag_id: currentBin.nfc_tag_id,
         user_nfc_code: userNfcCode // Send the actual user's NFC code
       }
       
@@ -163,7 +170,7 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
       const pollInterval = setInterval(async () => {
         try {
           // Check if NFC was scanned for this bin
-          const nfcResponse = await fetch(`http://localhost:1880/nfc/check-scan/${bin.id}`)
+          const nfcResponse = await fetch(`http://localhost:1880/nfc/check-scan/${currentBin.id}`)
           if (nfcResponse.ok) {
             const nfcData = await nfcResponse.json()
             if (nfcData.success && nfcData.verified) {
@@ -175,7 +182,11 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
               // Wait a moment then check if bin actually opened
               setTimeout(async () => {
                 try {
-                  const binResponse = await binApi.get(bin.id)
+                  const binResponse = await binApi.get(currentBin.id)
+                  setCurrentBin(binResponse)
+                  if (onBinUpdate) {
+                    onBinUpdate(binResponse)
+                  }
                   if (binResponse.is_open) {
                     console.log("[NFC] Bin opened successfully!")
                     setIsOpen(true)
@@ -194,14 +205,18 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
 
       return () => clearInterval(pollInterval)
     }
-  }, [waitingForNfc, isOpen, bin.id])
+  }, [waitingForNfc, isOpen, currentBin.id, onBinUpdate])
 
 
   const handleClose = async () => {
-    console.log("[v0] Closing bin:", bin.id)
+    console.log("[v0] Closing bin:", currentBin.id)
     try {
       // Call API to close bin
-      await binApi.closeBin(bin.id)
+      const updatedBin = await binApi.closeBin(currentBin.id)
+      setCurrentBin(updatedBin.bin)
+      if (onBinUpdate) {
+        onBinUpdate(updatedBin.bin)
+      }
       
       setIsOpen(false)
       setTimeRemaining(10)
@@ -219,8 +234,46 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
     }
   }
 
-  const handleTrashDetected = (points: number = 5) => {
+  const handleTrashDetected = async (points: number = 5) => {
     setIsDetecting(true)
+    
+    // Refresh bin data after detection service updates it
+    // Detection service updates bin capacity, so we wait a bit then refresh once
+    const refreshBinAfterDetection = async () => {
+      // Wait for detection service to process and update bin (1-2 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      try {
+        const updatedBin = await binApi.get(currentBin.id)
+        console.log("🔄 Refreshing bin after trash detection:", {
+          fill_level: updatedBin.fill_level,
+          capacity: updatedBin.capacity,
+          previous_fill_level: currentBin.fill_level
+        })
+        
+        setCurrentBin(updatedBin)
+        if (onBinUpdate) {
+          onBinUpdate(updatedBin)
+        }
+      } catch (error) {
+        console.error("Error refreshing bin after detection:", error)
+        // Retry once more after another delay
+        setTimeout(async () => {
+          try {
+            const updatedBin = await binApi.get(currentBin.id)
+            setCurrentBin(updatedBin)
+            if (onBinUpdate) {
+              onBinUpdate(updatedBin)
+            }
+          } catch (retryError) {
+            console.error("Error on retry refresh:", retryError)
+          }
+        }, 1000)
+      }
+    }
+    
+    // Refresh bin data after detection
+    refreshBinAfterDetection()
     
     // Wait 2 seconds before showing points animation
     setTimeout(() => {
@@ -232,26 +285,26 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
       
       // Close bin after animation
       setTimeout(() => {
-      handleClose()
+        handleClose()
         setTimeout(() => {
-      onClose()
+          onClose()
         }, 500)
       }, 2500)
     }, 2000) // 2 second delay
   }
 
   const getStatusColor = () => {
-    if (bin.fill_level >= 90) return "from-red-500 to-red-600"
-    if (bin.fill_level >= 70) return "from-orange-500 to-orange-600"
-    if (bin.fill_level >= 50) return "from-yellow-500 to-yellow-600"
+    if (currentBin.fill_level >= 90) return "from-red-500 to-red-600"
+    if (currentBin.fill_level >= 70) return "from-orange-500 to-orange-600"
+    if (currentBin.fill_level >= 50) return "from-yellow-500 to-yellow-600"
     return "from-green-500 to-green-600"
   }
 
   const getStatusBadge = () => {
-    if (bin.status === "full" || bin.fill_level >= 90) return { label: "Full", variant: "destructive" as const }
-    if (bin.status === "maintenance") return { label: "Maintenance", variant: "secondary" as const }
-    if (bin.status === "inactive") return { label: "Inactive", variant: "secondary" as const }
-    if (bin.fill_level < 50) return { label: "Available", variant: "default" as const }
+    if (currentBin.status === "full" || currentBin.fill_level >= 90) return { label: "Full", variant: "destructive" as const }
+    if (currentBin.status === "maintenance") return { label: "Maintenance", variant: "secondary" as const }
+    if (currentBin.status === "inactive") return { label: "Inactive", variant: "secondary" as const }
+    if (currentBin.fill_level < 50) return { label: "Available", variant: "default" as const }
     return { label: "Filling", variant: "secondary" as const }
   }
 
@@ -293,12 +346,12 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
                     </motion.div>
               <div>
                       <CardTitle className="text-xl font-bold text-white mb-1 drop-shadow-lg">
-                  {bin.name}
+                  {currentBin.name}
                 </CardTitle>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-white/90" />
                         <span className="text-xs text-white/90 font-medium">
-                          {bin.location}
+                          {currentBin.location}
                   </span>
                 </div>
               </div>
@@ -326,11 +379,13 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
                 </div>
                 <div className="glass rounded-lg p-3 border border-border/50 bg-gradient-to-br from-secondary/10 to-secondary/5">
                   <p className="text-xs text-muted-foreground font-medium mb-1.5">Capacity</p>
-                  <p className="text-base font-bold text-foreground">{bin.capacity}L</p>
+                  <p className="text-base font-bold text-foreground">{currentBin.capacity}L</p>
                 </div>
                 <div className="glass rounded-lg p-3 border border-border/50 bg-gradient-to-br from-accent/10 to-accent/5">
-                  <p className="text-xs text-muted-foreground font-medium mb-1.5">Fill Level</p>
-                  <p className="text-base font-bold text-foreground">{bin.fill_level}%</p>
+                  <p className="text-xs text-muted-foreground font-medium mb-1.5">Capacity Used</p>
+                  <p className="text-base font-bold text-foreground">
+                    {((currentBin.fill_level / 100) * currentBin.capacity).toFixed(1)}L
+                  </p>
             </div>
           </div>
 
@@ -339,18 +394,14 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-foreground">Fill Level</span>
                   <span className={`text-xl font-bold bg-gradient-to-r ${getStatusColor()} bg-clip-text text-transparent`}>
-                    {bin.fill_level}%
+                    {currentBin.fill_level}%
                   </span>
             </div>
-                <div className="relative">
-                  <Progress 
-                    value={bin.fill_level} 
-                    className="h-3 bg-muted/50"
-                  />
+                <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/30 shadow-inner">
                   <motion.div
-                    className={`absolute top-0 left-0 h-3 rounded-full bg-gradient-to-r ${getStatusColor()}`}
+                    className={`h-full bg-gradient-to-r ${getStatusColor()} rounded-full`}
                     initial={{ width: 0 }}
-                    animate={{ width: `${bin.fill_level}%` }}
+                    animate={{ width: `${currentBin.fill_level}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                   />
           </div>
@@ -501,24 +552,24 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
                     animate={{ opacity: 1, y: 0, height: "auto" }}
                     exit={{ opacity: 0, y: -10, height: 0 }}
                     className={`p-4 rounded-lg border-2 ${
-                      bin.status === "full" || bin.fill_level >= 90
+                      currentBin.status === "full" || currentBin.fill_level >= 90
                         ? "bg-red-500/10 border-red-500/40"
-                        : bin.status === "maintenance"
+                        : currentBin.status === "maintenance"
                         ? "bg-orange-500/10 border-orange-500/40"
                         : "bg-gray-500/10 border-gray-500/40"
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 ${
-                        bin.status === "full" || bin.fill_level >= 90
+                        currentBin.status === "full" || currentBin.fill_level >= 90
                           ? "text-red-500"
-                          : bin.status === "maintenance"
+                          : currentBin.status === "maintenance"
                           ? "text-orange-500"
                           : "text-gray-500"
                       }`}>
-                        {bin.status === "full" || bin.fill_level >= 90 ? (
+                        {currentBin.status === "full" || currentBin.fill_level >= 90 ? (
                           <X className="w-5 h-5" />
-                        ) : bin.status === "maintenance" ? (
+                        ) : currentBin.status === "maintenance" ? (
                           <Clock className="w-5 h-5" />
                         ) : (
                           <Lock className="w-5 h-5" />
@@ -526,15 +577,15 @@ export function BinControl({ bin, onClose, onTrashDeposited, userNfcCode }: BinC
                       </div>
                       <div className="flex-1">
                         <p className={`text-sm font-semibold mb-1 ${
-                          bin.status === "full" || bin.fill_level >= 90
+                          currentBin.status === "full" || currentBin.fill_level >= 90
                             ? "text-red-500"
-                            : bin.status === "maintenance"
+                            : currentBin.status === "maintenance"
                             ? "text-orange-500"
                             : "text-gray-500"
                         }`}>
-                          {bin.status === "full" || bin.fill_level >= 90
+                          {currentBin.status === "full" || currentBin.fill_level >= 90
                             ? "Bin is Full"
-                            : bin.status === "maintenance"
+                            : currentBin.status === "maintenance"
                             ? "Under Maintenance"
                             : "Bin is Inactive"}
                         </p>

@@ -112,6 +112,8 @@ export function AdminDashboard() {
         longitude: roundCoordinate(formData.longitude),
         capacity: parseInt(formData.capacity),
         status: formData.status,
+        // Automatically set fill_level to 100% if status is "full"
+        fill_level: formData.status === "full" ? 100 : 0,
       }
 
       if (editingBinId) {

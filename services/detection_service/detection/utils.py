@@ -8,6 +8,66 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def update_bin_capacity(bin_id, liters=5.0):
+    """
+    Add trash to bin and update capacity via Bin Service API
+    
+    Args:
+        bin_id: UUID of the bin
+        liters: Liters of trash to add (default: 5.0 liters per deposit)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        logger.info(f"📊 Adding {liters} liters of trash to bin {bin_id}")
+        
+        # Call Bin Service to add trash (uses add_trash method)
+        url = f"{settings.BIN_SERVICE_URL}/api/bins/list/{bin_id}/add-trash/"
+        
+        payload = {
+            "liters": liters
+        }
+        
+        logger.info(f"🌐 Calling Bin Service: {url}")
+        logger.info(f"📦 Payload: {payload}")
+        
+        response = requests.post(url, json=payload, timeout=10)
+        
+        logger.info(f"📨 Response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            try:
+                response_data = response.json()
+                new_capacity_used = response_data.get('current_capacity_used', 0)
+                new_fill_level = response_data.get('fill_level', 0)
+                bin_status = response_data.get('status', 'unknown')
+                bin_capacity = response_data.get('capacity', 100)
+                logger.info(f"✅ Bin capacity updated: {new_capacity_used}L / {bin_capacity}L ({new_fill_level}%, Status: {bin_status})")
+                return True
+            except:
+                logger.info(f"✅ Bin capacity updated successfully")
+                return True
+        else:
+            logger.error(f"❌ Failed to update bin capacity. Status: {response.status_code}")
+            try:
+                error_data = response.json()
+                logger.error(f"   Error response (JSON): {error_data}")
+            except:
+                logger.error(f"   Error response (text): {response.text}")
+            return False
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Network error calling Bin Service: {e}")
+        logger.error(f"   Bin Service URL: {settings.BIN_SERVICE_URL}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Unexpected error updating bin capacity: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def add_points_to_user(user_nfc_code, points, description=""):
     """
     Add points to user via Auth Service API

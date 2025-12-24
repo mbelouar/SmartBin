@@ -146,6 +146,8 @@ http://localhost:8080
 
 ### Installation
 
+#### Development (Local Build)
+
 1. **Clone the repository**
 
 ```bash
@@ -185,6 +187,33 @@ open http://localhost:1880
 # phpMyAdmin (Database)
 open http://localhost:8080
 ```
+
+#### Production (Docker Hub Images)
+
+For deploying on Proxmox or production servers using pre-built Docker Hub images:
+
+1. **Set up GitHub Actions secrets** (one-time setup):
+   - Go to GitHub repository → Settings → Secrets and variables → Actions
+   - Add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+
+2. **Clone and configure**:
+
+```bash
+git clone <repository-url>
+cd SmartBin
+cp .env.example .env
+# Edit .env with your Docker Hub username and secrets
+```
+
+3. **Pull and start services**:
+
+```bash
+export DOCKERHUB_USERNAME=your-dockerhub-username
+docker-compose -f docker-compose.prod.yml pull
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ## 🎮 How to Use
 
@@ -350,6 +379,35 @@ make logs
 # Specific service
 make logs SERVICE=detection_service
 ```
+
+## 🔄 CI/CD Pipeline
+
+This project includes a GitHub Actions workflow that automatically builds and pushes Docker images to Docker Hub.
+
+### How It Works
+
+- **Trigger**: Automatically runs on push to `main`/`master` branch or when tags are pushed
+- **Builds**: All 7 custom services (frontend, gateway, auth, bin, detection, reclamation, node-red)
+- **Pushes**: Images to Docker Hub as `{DOCKERHUB_USERNAME}/smartbin-{service}:latest`
+
+### Setup
+
+1. Create a Docker Hub account
+2. Generate an access token at https://hub.docker.com/settings/security
+3. Add GitHub secrets:
+   - `DOCKERHUB_USERNAME`: Your Docker Hub username
+   - `DOCKERHUB_TOKEN`: Your Docker Hub access token
+
+### Usage
+
+After pushing to `main`, images are automatically built and pushed. Pull them on your Proxmox machine:
+
+```bash
+docker-compose -f docker-compose.prod.yml pull
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide.
 
 ## 🤝 Contributing
 

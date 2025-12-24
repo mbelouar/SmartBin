@@ -33,14 +33,14 @@ class MaterialDetection(models.Model):
     
     def award_points(self):
         """
-        Award points to user via Auth Service
+        Award points to user via Auth Service and update bin capacity
         Always awards 5 points per trash deposit regardless of material type
         Returns True if successful, False otherwise
         """
         if self.points_added_to_user:
             return True  # Already awarded
         
-        from .utils import add_points_to_user
+        from .utils import add_points_to_user, update_bin_capacity
         
         # Always award 5 points per trash deposit
         points = 5
@@ -56,6 +56,20 @@ class MaterialDetection(models.Model):
             self.points_awarded = points
             self.points_added_to_user = True
             self.save(update_fields=['points_awarded', 'points_added_to_user'])
+            
+            # Update bin capacity - each trash deposit adds ~5 liters
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🔄 About to call update_bin_capacity for bin {self.bin_id}")
+            try:
+                # Add 5 liters of trash to the bin
+                capacity_result = update_bin_capacity(self.bin_id, liters=5.0)
+                logger.info(f"🔄 update_bin_capacity returned: {capacity_result}")
+            except Exception as e:
+                logger.error(f"❌ Exception in update_bin_capacity: {e}")
+                import traceback
+                traceback.print_exc()
+            
             return True
         
         return False

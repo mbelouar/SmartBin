@@ -13,15 +13,24 @@ interface BinCardProps {
 
 export function BinCard({ bin, onClick }: BinCardProps) {
   const getStatusColor = (fillLevel: number) => {
-    if (fillLevel < 30) return "text-primary"
-    if (fillLevel < 70) return "text-accent"
-    return "text-destructive"
+    if (fillLevel >= 90) return "text-red-600"
+    if (fillLevel >= 70) return "text-orange-600"
+    if (fillLevel >= 50) return "text-yellow-600"
+    return "text-green-600"
   }
   
   const getFillLevelGradient = (fillLevel: number) => {
-    if (fillLevel < 30) return "from-primary/20 to-primary/5"
-    if (fillLevel < 70) return "from-accent/20 to-accent/5"
-    return "from-destructive/20 to-destructive/5"
+    if (fillLevel >= 90) return "from-red-500 to-red-600"
+    if (fillLevel >= 70) return "from-orange-500 to-orange-600"
+    if (fillLevel >= 50) return "from-yellow-500 to-yellow-600"
+    return "from-green-500 to-green-600"
+  }
+  
+  const getProgressColor = (fillLevel: number) => {
+    if (fillLevel >= 90) return "bg-red-500"
+    if (fillLevel >= 70) return "bg-orange-500"
+    if (fillLevel >= 50) return "bg-yellow-500"
+    return "bg-green-500"
   }
   
   const getStatusBadge = (status: string) => {
@@ -70,22 +79,28 @@ export function BinCard({ bin, onClick }: BinCardProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground font-semibold">Fill Level</span>
-            <span className={`font-bold text-lg tabular-nums ${getStatusColor(bin.fill_level)}`}>{bin.fill_level}%</span>
+            <span className={`font-bold text-lg tabular-nums ${getStatusColor(bin.fill_level)}`}>
+              {bin.fill_level}%
+            </span>
           </div>
-          <div className="relative">
-            <Progress value={bin.fill_level} className="h-3 shadow-inner" />
-            <div className={`absolute inset-0 bg-gradient-to-r ${getFillLevelGradient(bin.fill_level)} rounded-full opacity-50 pointer-events-none`} />
+          <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/30 shadow-inner">
+            <div 
+              className={`h-full bg-gradient-to-r ${getFillLevelGradient(bin.fill_level)} transition-all duration-500 ease-out`}
+              style={{ width: `${bin.fill_level}%` }}
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="space-y-1 p-3 rounded-lg glass border border-border/50 hover-lift">
-            <p className="text-muted-foreground text-xs font-medium">Capacity</p>
-            <p className="font-bold capitalize text-foreground">{bin.capacity}L</p>
+            <p className="text-muted-foreground text-xs font-medium">Capacity Used</p>
+            <p className="font-bold capitalize text-foreground">
+              {((bin.fill_level / 100) * bin.capacity).toFixed(1)}L
+            </p>
           </div>
           <div className="space-y-1 p-3 rounded-lg glass border border-border/50 hover-lift">
-            <p className="text-muted-foreground text-xs font-medium">QR Code</p>
-            <p className="font-bold text-foreground text-xs truncate">{bin.qr_code}</p>
+            <p className="text-muted-foreground text-xs font-medium">Capacity</p>
+            <p className="font-bold text-foreground">{bin.capacity}L</p>
           </div>
         </div>
 

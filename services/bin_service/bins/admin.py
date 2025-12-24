@@ -4,7 +4,7 @@ from .models import Bin, BinUsageLog
 
 @admin.register(Bin)
 class BinAdmin(admin.ModelAdmin):
-    list_display = ['name', 'location', 'status', 'fill_level', 'is_open', 'created_at']
+    list_display = ['name', 'location', 'status', 'capacity', 'fill_level', 'is_open', 'created_at']
     list_filter = ['status', 'is_open', 'created_at']
     search_fields = ['name', 'location', 'qr_code']
     readonly_fields = ['id', 'created_at', 'updated_at', 'last_opened_at', 'last_emptied_at']

@@ -13,9 +13,10 @@ import { TrendingUp, Loader2, AlertCircle } from "lucide-react"
 
 interface DashboardViewProps {
   onBinSelect: (bin: Bin) => void
+  refreshTrigger?: number // When this changes, refresh bins
 }
 
-export function DashboardView({ onBinSelect }: DashboardViewProps) {
+export function DashboardView({ onBinSelect, refreshTrigger }: DashboardViewProps) {
   const [bins, setBins] = useState<Bin[]>([])
   const [filteredBins, setFilteredBins] = useState<Bin[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,21 +24,33 @@ export function DashboardView({ onBinSelect }: DashboardViewProps) {
   const [selectedCity, setSelectedCity] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
 
-  useEffect(() => {
-    async function loadBins() {
-      try {
-        setLoading(true)
-        const response = await binApi.list()
-        setBins(response.results || response as any)
-      } catch (err) {
-        console.error("Failed to load bins:", err)
-        setError("Failed to load bins. Please try again.")
-      } finally {
-        setLoading(false)
-      }
+  const loadBins = async () => {
+    try {
+      setLoading(true)
+      const response = await binApi.list()
+      setBins(response.results || response as any)
+    } catch (err) {
+      console.error("Failed to load bins:", err)
+      setError("Failed to load bins. Please try again.")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadBins()
   }, [])
+
+  // Refresh when refreshTrigger changes (e.g., after trash deposited)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      console.log("🔄 Refreshing bins after trash deposit")
+      // Wait a bit for backend to process, then refresh
+      setTimeout(() => {
+        loadBins()
+      }, 2000)
+    }
+  }, [refreshTrigger])
 
   // Filter bins based on city and status
   useEffect(() => {
