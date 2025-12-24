@@ -42,8 +42,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }},${{ env.IMAGE_PREFIX }}-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
           build-args: |
             NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
             NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
