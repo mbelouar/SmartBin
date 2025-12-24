@@ -49,6 +49,12 @@ jobs:
             NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
             NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
             NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+            NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+            NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+            NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+            NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 
       - name: Build and push Gateway
         uses: docker/build-push-action@v5
