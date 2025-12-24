@@ -14,6 +14,9 @@ import { isAdminUser } from "@/lib/utils"
 import { authApi, binApi } from "@/lib/api"
 import type { Bin } from "@/lib/types"
 
+// Force dynamic rendering to avoid build-time errors with Clerk
+export const dynamic = 'force-dynamic'
+
 export default function DashboardPage() {
   const router = useRouter()
   const { isLoaded, isSignedIn, signOut } = useAuth()

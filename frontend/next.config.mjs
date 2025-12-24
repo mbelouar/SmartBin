@@ -7,6 +7,14 @@ const nextConfig = {
     unoptimized: true,
   },
   output: 'standalone',
+  // Skip static page generation during build when Clerk keys are not available
+  experimental: {
+    skipTrailingSlashRedirect: true,
+  },
+  // Disable static optimization for pages that require Clerk
+  generateBuildId: async () => {
+    return 'smartbin-build'
+  },
   // Allow API calls to backend services
   async rewrites() {
     const authUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8001';

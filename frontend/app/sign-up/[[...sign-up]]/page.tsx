@@ -4,6 +4,9 @@ import { Suspense } from "react";
 import { SignUp } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 
+// Force dynamic rendering to avoid build-time errors with Clerk
+export const dynamic = 'force-dynamic'
+
 function SignUpContent() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect_url') || '/dashboard';

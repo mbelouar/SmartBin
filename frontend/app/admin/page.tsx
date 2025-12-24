@@ -10,6 +10,9 @@ import { LogOut, User } from "lucide-react"
 import { isAdminUser } from "@/lib/utils"
 import { useClerkApi } from "@/hooks/use-clerk-api"
 
+// Force dynamic rendering to avoid build-time errors with Clerk
+export const dynamic = 'force-dynamic'
+
 export default function AdminPage() {
   const router = useRouter()
   const { isLoaded, isSignedIn, signOut } = useAuth()

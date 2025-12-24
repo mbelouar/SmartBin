@@ -6,6 +6,9 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
+// Force dynamic rendering to avoid build-time errors with Clerk
+export const dynamic = 'force-dynamic'
+
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 
