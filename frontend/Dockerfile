@@ -1,32 +1,19 @@
 # Multi-stage build for Next.js SmartBin Frontend
 
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
-WORKDIR /app
-
-# Install pnpm globally
-RUN npm install -g pnpm
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies with frozen lockfile for reproducible builds
-RUN pnpm install --frozen-lockfile
-
-# Stage 2: Builder
+# Stage 1: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy package files and pnpm config first for better layer caching
+COPY package.json pnpm-lock.yaml* .npmrc* ./
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Install dependencies (install all, including devDependencies for build)
+RUN pnpm install --frozen-lockfile
 
-# Copy all source files
+# Copy all remaining files (excluding what's in .dockerignore)
 COPY . .
 
 # Set environment variables for build
