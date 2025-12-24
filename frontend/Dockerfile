@@ -5,13 +5,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for better layer caching
-COPY package.json pnpm-lock.yaml* package-lock.json* ./
+COPY package.json ./
 
-# Clean npm cache to ensure fresh install (prevents cached issues in CI/CD)
-RUN npm cache clean --force
-
-# Install dependencies using npm with force flag to handle all peer dependency conflicts
-# This ensures all dependencies are installed even if there are peer dependency warnings
+# Install dependencies - npm will create package-lock.json automatically
 RUN npm install --force
 
 # Copy all remaining source files
