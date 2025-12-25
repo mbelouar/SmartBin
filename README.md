@@ -146,8 +146,6 @@ http://localhost:8080
 
 ### Installation
 
-#### Development (Local Build)
-
 1. **Clone the repository**
 
 ```bash
@@ -187,33 +185,6 @@ open http://localhost:1880
 # phpMyAdmin (Database)
 open http://localhost:8080
 ```
-
-#### Production (Docker Hub Images)
-
-For deploying on Proxmox or production servers using pre-built Docker Hub images:
-
-1. **Set up GitHub Actions secrets** (one-time setup):
-   - Go to GitHub repository → Settings → Secrets and variables → Actions
-   - Add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
-
-2. **Clone and configure**:
-
-```bash
-git clone <repository-url>
-cd SmartBin
-cp .env.example .env
-# Edit .env with your Docker Hub username and secrets
-```
-
-3. **Pull and start services**:
-
-```bash
-export DOCKERHUB_USERNAME=your-dockerhub-username
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ## 🎮 How to Use
 
@@ -380,34 +351,46 @@ make logs
 make logs SERVICE=detection_service
 ```
 
-## 🔄 CI/CD Pipeline
+## 🚀 CI/CD - Docker Hub Deployment
 
-This project includes a GitHub Actions workflow that automatically builds and pushes Docker images to Docker Hub.
+This project includes automated CI/CD using GitHub Actions to build and push Docker images to Docker Hub.
 
-### How It Works
+### Quick Setup
 
-- **Trigger**: Automatically runs on push to `main`/`master` branch or when tags are pushed
-- **Builds**: All 7 custom services (frontend, gateway, auth, bin, detection, reclamation, node-red)
-- **Pushes**: Images to Docker Hub as `{DOCKERHUB_USERNAME}/smartbin-{service}:latest`
+1. **Add GitHub Secrets:**
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Add `DOCKER_USERNAME` (your Docker Hub username)
+   - Add `DOCKER_PASSWORD` (your Docker Hub password or access token)
 
-### Setup
+2. **Push to main/master branch:**
+   - The workflow automatically builds and pushes all 7 Docker images
+   - Images are tagged with `latest` and the commit SHA
 
-1. Create a Docker Hub account
-2. Generate an access token at https://hub.docker.com/settings/security
-3. Add GitHub secrets:
-   - `DOCKERHUB_USERNAME`: Your Docker Hub username
-   - `DOCKERHUB_TOKEN`: Your Docker Hub access token
+3. **Access your images:**
+   ```bash
+   docker pull your-username/smartbin-frontend:latest
+   docker pull your-username/smartbin-gateway:latest
+   # ... and so on
+   ```
 
-### Usage
+### What Gets Built
 
-After pushing to `main`, images are automatically built and pushed. Pull them on your Proxmox machine:
+The CI/CD pipeline builds and pushes these images:
+- `smartbin-frontend` - Next.js frontend
+- `smartbin-gateway` - API Gateway
+- `smartbin-auth-service` - Authentication service
+- `smartbin-bin-service` - Bin management service
+- `smartbin-detection-service` - Detection service
+- `smartbin-reclamation-service` - Reclamation service
+- `smartbin-node-red` - Node-RED IoT simulator
 
-```bash
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
-```
+### Workflow Triggers
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide.
+- ✅ Push to `main`/`master` branch
+- ✅ Manual trigger (Actions tab → Run workflow)
+- ✅ Pull requests (builds only, doesn't push)
+
+📖 **For detailed setup instructions, see [.github/DEPLOYMENT.md](.github/DEPLOYMENT.md)**
 
 ## 🤝 Contributing
 

@@ -3,46 +3,28 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
   images: {
     unoptimized: true,
   },
   output: 'standalone',
-  // Skip static page generation during build when Clerk keys are not available
-  experimental: {
-    skipTrailingSlashRedirect: true,
-  },
-  // Disable static optimization for pages that require Clerk
-  generateBuildId: async () => {
-    return 'smartbin-build'
-  },
   // Allow API calls to backend services
   async rewrites() {
-    const authUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8001';
-    const binUrl = process.env.NEXT_PUBLIC_BIN_SERVICE_URL || 'http://localhost:8002';
-    const detectionUrl = process.env.NEXT_PUBLIC_DETECTION_SERVICE_URL || 'http://localhost:8003';
-    const reclamationUrl = process.env.NEXT_PUBLIC_RECLAMATION_SERVICE_URL || 'http://localhost:8004';
-
     return [
       {
         source: '/api/auth/:path*',
-        destination: authUrl + '/api/auth/:path*',
+        destination: process.env.NEXT_PUBLIC_AUTH_SERVICE_URL + '/api/auth/:path*',
       },
       {
         source: '/api/bins/:path*',
-        destination: binUrl + '/api/bins/:path*',
+        destination: process.env.NEXT_PUBLIC_BIN_SERVICE_URL + '/api/bins/:path*',
       },
       {
         source: '/api/detections/:path*',
-        destination: detectionUrl + '/api/detections/:path*',
+        destination: process.env.NEXT_PUBLIC_DETECTION_SERVICE_URL + '/api/detections/:path*',
       },
       {
         source: '/api/reclamations/:path*',
-        destination: reclamationUrl + '/api/reclamations/:path*',
+        destination: process.env.NEXT_PUBLIC_RECLAMATION_SERVICE_URL + '/api/reclamations/:path*',
       },
     ]
   },

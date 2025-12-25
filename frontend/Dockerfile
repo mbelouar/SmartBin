@@ -1,49 +1,31 @@
 # Multi-stage build for Next.js SmartBin Frontend
-# Simplified to match local docker-compose setup
 
-# Stage 1: Builder
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install pnpm and dependencies (no frozen lockfile for development)
+RUN npm install -g pnpm && \
+    pnpm install --no-frozen-lockfile
+
+# Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install pnpm (same as local setup)
-RUN npm install -g pnpm
-
-# Copy package files and config first (for better caching)
-COPY package.json pnpm-lock.yaml ./
-
-# Copy .npmrc for pnpm hoisting (critical for module resolution)
-COPY .npmrc ./
-
-# Install dependencies (same command as local)
-# Using --shamefully-hoist via .npmrc to match local behavior
-RUN pnpm install --frozen-lockfile
-
-# Copy all remaining source files
-# .dockerignore will exclude node_modules, .next, etc.
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Set environment variables for build (BEFORE build command)
+# Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build arguments with defaults
-ARG NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
-ARG NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
-ARG NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
-ARG NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy
-ARG CLERK_SECRET_KEY=sk_test_dummy
-
-# Set as environment variables (must be set before build)
-ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
-ENV NEXT_PUBLIC_BIN_SERVICE_URL=$NEXT_PUBLIC_BIN_SERVICE_URL
-ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=$NEXT_PUBLIC_DETECTION_SERVICE_URL
-ENV NEXT_PUBLIC_RECLAMATION_SERVICE_URL=$NEXT_PUBLIC_RECLAMATION_SERVICE_URL
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
-
-# Build (same as local would do for production)
-RUN pnpm run build
+# Build the Next.js application
+RUN npm install -g pnpm && \
+    pnpm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner

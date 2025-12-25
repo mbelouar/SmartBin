@@ -5,21 +5,21 @@ on:
     branches:
       - main
       - master
-    tags:
-      - "v*"
   pull_request:
     branches:
       - main
       - master
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual triggering
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/smartbin
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
@@ -32,8 +32,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
@@ -41,19 +41,9 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }},${{ env.IMAGE_PREFIX }}-frontend:latest
-          no-cache: true
-          build-args: |
-            NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
-            NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
-            NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
-            NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
-            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-            CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
-            NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-            NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-            NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-            NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-frontend:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and push Gateway
         uses: docker/build-push-action@v5
@@ -61,7 +51,7 @@ jobs:
           context: ./gateway
           file: ./gateway/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-gateway:${{ github.sha }},${{ env.IMAGE_PREFIX }}-gateway:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-gateway:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-gateway:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -71,7 +61,7 @@ jobs:
           context: ./services/auth_service
           file: ./services/auth_service/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-auth-service:${{ github.sha }},${{ env.IMAGE_PREFIX }}-auth-service:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-auth-service:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-auth-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -81,7 +71,7 @@ jobs:
           context: ./services/bin_service
           file: ./services/bin_service/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-bin-service:${{ github.sha }},${{ env.IMAGE_PREFIX }}-bin-service:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-bin-service:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-bin-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -91,7 +81,7 @@ jobs:
           context: ./services/detection_service
           file: ./services/detection_service/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-detection-service:${{ github.sha }},${{ env.IMAGE_PREFIX }}-detection-service:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-detection-service:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-detection-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -101,7 +91,7 @@ jobs:
           context: ./services/reclamation_service
           file: ./services/reclamation_service/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-reclamation-service:${{ github.sha }},${{ env.IMAGE_PREFIX }}-reclamation-service:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-reclamation-service:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-reclamation-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -111,22 +101,23 @@ jobs:
           context: ./node-red
           file: ./node-red/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}-node-red:${{ github.sha }},${{ env.IMAGE_PREFIX }}-node-red:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartbin-node-red:latest,${{ secrets.DOCKER_USERNAME }}/smartbin-node-red:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Summary
         if: github.event_name != 'pull_request'
         run: |
-          echo "## Docker Images Built and Pushed 🐳" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Images Pushed Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All images have been pushed to Docker Hub:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-frontend:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-gateway:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-auth-service:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-bin-service:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-detection-service:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-reclamation-service:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_PREFIX }}-node-red:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "All images have been built and pushed to Docker Hub:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Use \`docker-compose -f docker-compose.prod.yml pull\` to pull all images." >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-frontend:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-gateway:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-auth-service:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-bin-service:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-detection-service:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-reclamation-service:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKER_USERNAME }}/smartbin-node-red:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
