@@ -17,6 +17,8 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy all source files (excluding what's in .dockerignore)
 COPY . .
 
 # Accept build arguments for environment variables (optional)
@@ -32,6 +34,9 @@ ENV NEXT_PUBLIC_AUTH_SERVICE_URL=${NEXT_PUBLIC_AUTH_SERVICE_URL}
 ENV NEXT_PUBLIC_BIN_SERVICE_URL=${NEXT_PUBLIC_BIN_SERVICE_URL}
 ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=${NEXT_PUBLIC_DETECTION_SERVICE_URL}
 ENV NEXT_PUBLIC_RECLAMATION_SERVICE_URL=${NEXT_PUBLIC_RECLAMATION_SERVICE_URL}
+
+# Verify lib directory exists (for debugging)
+RUN ls -la lib/ || echo "lib directory not found"
 
 # Build the Next.js application
 RUN npm install -g pnpm && \
