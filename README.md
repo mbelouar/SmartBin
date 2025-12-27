@@ -182,9 +182,51 @@ open http://localhost:3000
 # Node-RED (IoT Simulator)
 open http://localhost:1880
 
+# API Gateway
+open http://localhost:8000
+
 # phpMyAdmin (Database)
 open http://localhost:8080
 ```
+
+## 🚀 Production Deployment
+
+SmartBin can be deployed in production using pre-built Docker images from Docker Hub.
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Access to Docker Hub images (publicly available at `mbelouar/smartbin-*`)
+
+### Production Setup
+
+1. **Pull images from Docker Hub**
+
+```bash
+make pull-images
+```
+
+2. **Start production services**
+
+```bash
+make start-prod
+```
+
+3. **Run migrations**
+
+```bash
+make migrate-prod
+```
+
+4. **Create admin user** (if needed)
+
+```bash
+docker-compose -f docker-compose.prod.yml exec bin_service python manage.py createsuperuser
+```
+
+5. **Access the application** (same URLs as development)
+
+**Note:** Production deployment uses `docker-compose.prod.yml` which pulls images from Docker Hub instead of building locally. This ensures faster deployment and consistent builds.
 
 ## 🎮 How to Use
 
@@ -240,22 +282,26 @@ open http://localhost:8080
 - **Framework**: Next.js 16 (React 19)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS, shadcn/ui
-- **Maps**: Leaflet (OpenStreetMap)
+- **Maps**: Leaflet (OpenStreetMap), Google Maps API
 - **Animations**: Framer Motion
+- **Authentication**: Clerk (user management & authentication)
+- **Package Manager**: pnpm
 
 ### Backend
 
-- **Framework**: Django + Django REST Framework
+- **Framework**: Django 4.2 + Django REST Framework
 - **Language**: Python 3.11
-- **Authentication**: JWT (SimpleJWT)
+- **Authentication**: Clerk backend integration + JWT
 - **API Pattern**: RESTful microservices
+- **API Gateway**: Django-based routing service
 
 ### Infrastructure
 
 - **Database**: MySQL 8.0
-- **Message Broker**: Mosquitto MQTT
+- **Message Broker**: Mosquitto MQTT 2.0
 - **IoT Simulator**: Node-RED
 - **Containerization**: Docker + Docker Compose
+- **Image Registry**: Docker Hub (`mbelouar/smartbin-*`)
 
 ## 📁 Project Structure
 
@@ -280,39 +326,81 @@ SmartBin/
 
 ## 📊 Database Schema
 
-### Essential Tables (10 total)
+The system uses **MySQL 8.0** with separate databases per service:
 
-**Application Tables (7):**
+- `auth_db` - Authentication service database
+- `bin_db` - Bin management service database
+- `detection_db` - Detection service database
+- `reclamation_db` - Reclamation service database
+
+### Essential Tables
+
+**Application Tables:**
 
 - `bins` - Smart bin information (with auto-generated QR codes & NFC tags)
-- `auth_users` - User accounts with points system
+- `auth_users` - User accounts with points system (integrated with Clerk)
 - `auth_points_history` - Points transaction history
 - `bin_usage_logs` - Bin usage tracking
 - `material_detections` - Waste detection events
 - `detection_stats` - Aggregated statistics
 - `reclamations` - User complaints/reports
 
-**Django System Tables (3):**
+**Django System Tables:**
 
 - `django_content_type` - Content type registry
 - `django_migrations` - Migration tracking
 - `django_session` - Session storage
 
+### Database Access
+
+- **phpMyAdmin**: `http://localhost:8080`
+  - Server: `mysql`
+  - Username: `smartbin_user`
+  - Password: `smartbin_pass`
+- **Direct MySQL**: `localhost:3306`
+  - Root password: `root_password`
+
 ## 🔧 Makefile Commands
 
+### Development Commands
+
 ```bash
-make help      # Show all available commands
-make start     # Start all services
-make stop      # Stop all services
-make restart   # Restart all services
-make status    # Show service status
-make logs      # Show logs (use: make logs SERVICE=frontend)
-make build     # Build all services
-make migrate   # Run database migrations
-make admin     # Create admin user
-make clean     # Stop and remove containers/volumes
-make urls      # Show service URLs
+make help          # Show all available commands
+make start         # Start all services (development)
+make stop          # Stop all services
+make restart       # Restart all services
+make status        # Show service status
+make logs          # Show logs (use: make logs SERVICE=frontend)
+make build         # Build all services
+make build-frontend # Build frontend image separately
+make migrate       # Run database migrations
+make admin         # Create admin user
+make clean         # Stop and remove containers/volumes
+make urls          # Show service URLs
 ```
+
+### Production Deployment Commands
+
+```bash
+make pull-images   # Pull all images from Docker Hub
+make start-prod    # Start all services using Docker Hub images
+make migrate-prod  # Run database migrations (production)
+make stop-prod     # Stop production services
+```
+
+### Docker Hub Publishing Commands
+
+```bash
+make tag-all       # Tag all images for Docker Hub (requires DOCKERHUB_USER)
+make push-images   # Push all images to Docker Hub (requires DOCKERHUB_USER)
+make build-push    # Build and push all images
+make push-all      # Build, tag, and push all images (complete workflow)
+
+# Example usage:
+make push-all DOCKERHUB_USER=yourusername
+```
+
+**Note:** Docker Hub images are available at `mbelouar/smartbin-*` (e.g., `mbelouar/smartbin-frontend:latest`)
 
 ## 🐛 Troubleshooting
 
@@ -326,13 +414,21 @@ make start
 ### Frontend build errors
 
 ```bash
+# Development
 docker-compose restart frontend
+
+# Production
+docker-compose -f docker-compose.prod.yml restart frontend
 ```
 
 ### MQTT not receiving messages
 
 ```bash
+# Development
 docker-compose restart detection_service node_red
+
+# Production
+docker-compose -f docker-compose.prod.yml restart detection_service node_red
 ```
 
 ### Bin won't open (NFC verification)
@@ -341,15 +437,79 @@ docker-compose restart detection_service node_red
 2. Go to Node-RED and click "Simulate: User Taps NFC"
 3. Check Node-RED debug panel for errors
 
+### Database connection issues
+
+```bash
+# Check MySQL health
+docker-compose ps mysql
+
+# View MySQL logs
+make logs SERVICE=mysql
+
+# Restart MySQL
+docker-compose restart mysql
+```
+
+### Production deployment issues
+
+```bash
+# Ensure images are pulled
+make pull-images
+
+# Check service status
+docker-compose -f docker-compose.prod.yml ps
+
+# View production logs
+docker-compose -f docker-compose.prod.yml logs -f [service_name]
+```
+
 ### View logs
 
 ```bash
-# All services
+# All services (development)
 make logs
 
-# Specific service
+# Specific service (development)
 make logs SERVICE=detection_service
+
+# Production logs
+docker-compose -f docker-compose.prod.yml logs -f [service_name]
 ```
+
+## 📦 Docker Images
+
+Pre-built Docker images are available on Docker Hub for easy deployment:
+
+### Available Images
+
+- `mbelouar/smartbin-auth-service:latest` - Authentication service
+- `mbelouar/smartbin-bin-service:latest` - Bin management service
+- `mbelouar/smartbin-detection-service:latest` - Material detection service
+- `mbelouar/smartbin-reclamation-service:latest` - Reclamation service
+- `mbelouar/smartbin-gateway:latest` - API Gateway
+- `mbelouar/smartbin-node-red:latest` - Node-RED IoT simulator
+- `mbelouar/smartbin-frontend:latest` - Next.js frontend application
+
+### Building and Publishing Images
+
+To build and push your own images:
+
+```bash
+# Set your Docker Hub username
+export DOCKERHUB_USER=yourusername
+
+# Build and push all images
+make push-all DOCKERHUB_USER=yourusername
+```
+
+This will:
+
+1. Build all service images
+2. Build the frontend image
+3. Tag all images with your Docker Hub username
+4. Push all images to Docker Hub
+
+**Note:** Make sure you're logged in to Docker Hub first: `docker login`
 
 ## 🤝 Contributing
 
