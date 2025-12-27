@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/banner.png" alt="SmartBin - IoT Waste Management System" width="100%">
+</div>
+
 # 🗑️ SmartBin - IoT Waste Management System
 
 A modern, microservices-based smart waste management system with NFC proximity verification, real-time IoT integration, and gamification.
