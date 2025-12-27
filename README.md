@@ -121,4 +121,4 @@ docker-compose restart [service_name]
 
 ## 📝 License
 
-MIT License
+This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
