@@ -4,533 +4,121 @@ A modern, microservices-based smart waste management system with NFC proximity v
 
 ## 🌟 Features
 
-- **NFC Proximity Verification** - Users must physically tap NFC tag to open bins (prevents remote access)
-- **Smart Bin Management** - Real-time bin monitoring with fill level tracking
+- **NFC Proximity Verification** - Physical tap required to open bins
+- **Smart Bin Management** - Real-time monitoring with fill level tracking
 - **IoT Integration** - MQTT-based communication with waste detection sensors
-- **Gamification** - Earn points for recycling different materials
-- **Interactive Map** - Find nearby bins with live availability status
+- **Gamification** - Earn points for recycling
+- **Interactive Map** - Find nearby bins with live availability
 - **Material Detection** - AI-powered waste classification
-- **User Dashboard** - Track eco-points, recycling stats, and achievements
-- **Admin Panel** - Manage bins, view analytics, and monitor system health
+- **Admin Panel** - Manage bins and view analytics
 
 ## 🏗️ Architecture
 
-SmartBin follows a **microservices architecture** with event-driven communication via MQTT.
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Frontend (Next.js)                       │
-│                    http://localhost:3000                         │
-└─────────────────┬───────────────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     API Gateway (Django)                         │
-│                    http://localhost:8000                         │
-│              Routes requests to microservices                    │
-└──┬────────────┬────────────┬────────────┬─────────────────────┘
-   │            │            │            │
-   ▼            ▼            ▼            ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│   Auth   │ │   Bin    │ │Detection │ │Reclamation│
-│ Service  │ │ Service  │ │ Service  │ │  Service  │
-│  :8001   │ │  :8002   │ │  :8003   │ │   :8004   │
-└────┬─────┘ └────┬─────┘ └────┬─────┘ └──────────┘
-     │            │            │
-     └────────────┴────────────┴─────────────┐
-                                              │
-                  ┌───────────────────────────┼─────────────────┐
-                  │                           │                 │
-                  ▼                           ▼                 ▼
-         ┌──────────────┐          ┌──────────────┐   ┌──────────────┐
-         │    MySQL     │          │   Mosquitto  │   │   Node-RED   │
-         │   Database   │          │ MQTT Broker  │   │ IoT Simulator│
-         │    :3306     │          │    :1883     │   │    :1880     │
-         └──────────────┘          └──────────────┘   └──────────────┘
+Frontend (Next.js) :3000
+    ↓
+API Gateway :8000
+    ↓
+┌──────────┬──────────┬──────────┬──────────┐
+│   Auth   │   Bin    │Detection │Reclamation│
+│  :8001   │  :8002   │  :8003   │   :8004   │
+└────┬─────┴────┬─────┴────┬─────┴──────────┘
+     │          │          │
+     └──────────┴──────────┴───────┐
+                                   │
+          ┌────────────┬───────────┴──────────┐
+          │   MySQL    │   Mosquitto  │ Node-RED│
+          │   :3306    │    :1883     │  :1880  │
+          └────────────┴──────────────┴─────────┘
 ```
-
-## 🔄 Service Communication
-
-### HTTP (REST APIs)
-
-- **Frontend** → **Gateway** → **Microservices**
-- JWT-based authentication
-- JSON request/response
-
-### MQTT (Event-Driven)
-
-- **Bin Service** → publishes `bin/{id}/open` and `bin/{id}/close`
-- **Node-RED** → publishes `bin/{id}/detected` (trash detection)
-- **Detection Service** → subscribes to `bin/+/detected` (processes detections)
-
-## 📡 Service Endpoints
-
-### Frontend (Next.js)
-
-```
-http://localhost:3000
-```
-
-- User dashboard, map view, login/register, admin panel
-
-### API Gateway
-
-```
-http://localhost:8000
-```
-
-- `/api/auth/*` → Auth Service
-- `/api/bins/*` → Bin Service
-- `/api/detections/*` → Detection Service
-- `/api/reclamations/*` → Reclamation Service
-
-### Auth Service
-
-```
-http://localhost:8001/api/auth
-```
-
-- `POST /login/` - User login
-- `POST /register/` - User registration
-- `GET /profile/` - User profile
-- `GET /points/history/` - Points history
-
-### Bin Service
-
-```
-http://localhost:8002/api/bins
-```
-
-- `GET /list/` - List all bins
-- `POST /list/{id}/open/` - Open a bin (requires NFC verification)
-- `POST /list/{id}/close/` - Close a bin
-- `POST /list/` - Create bin (admin)
-- `DELETE /list/{id}/` - Delete bin (admin)
-
-### Detection Service
-
-```
-http://localhost:8003/api/detections
-```
-
-- `GET /list/` - List detections
-- `GET /stats/` - Detection statistics
-
-### Node-RED (IoT Simulator)
-
-```
-http://localhost:1880
-```
-
-- **"Simulate: User Taps NFC"** - Simulate NFC tag scan for proximity verification
-- **"Simulate: User Puts Trash"** - Simulate trash detection event
-- Monitor MQTT messages
-- Debug IoT events
-
-### phpMyAdmin (Database UI)
-
-```
-http://localhost:8080
-```
-
-- Server: `mysql`
-- Username: `smartbin_user`
-- Password: `smartbin_pass`
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- Git
 
 ### Installation
 
-1. **Clone the repository**
-
 ```bash
+# Clone repository
 git clone <repository-url>
 cd SmartBin
-```
 
-2. **Start all services**
-
-```bash
+# Start all services
 make start
-# or
-docker-compose up -d
-```
 
-3. **Run migrations**
-
-```bash
+# Run migrations
 make migrate
-```
 
-4. **Create admin user**
-
-```bash
+# Create admin user
 make admin
-```
 
-5. **Access the application**
-
-```bash
-# Frontend
-open http://localhost:3000
-
-# Node-RED (IoT Simulator)
-open http://localhost:1880
-
-# API Gateway
-open http://localhost:8000
-
-# phpMyAdmin (Database)
-open http://localhost:8080
+# Access application
+# Frontend: http://localhost:3000
+# Node-RED: http://localhost:1880
+# Gateway: http://localhost:8000
+# phpMyAdmin: http://localhost:8080
 ```
 
 ## 🚀 Production Deployment
 
-SmartBin can be deployed in production using pre-built Docker images from Docker Hub.
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Access to Docker Hub images (publicly available at `mbelouar/smartbin-*`)
-
-### Production Setup
-
-1. **Pull images from Docker Hub**
-
 ```bash
+# Pull images from Docker Hub
 make pull-images
-```
 
-2. **Start production services**
-
-```bash
+# Start production services
 make start-prod
-```
 
-3. **Run migrations**
-
-```bash
+# Run migrations
 make migrate-prod
 ```
 
-4. **Create admin user** (if needed)
+**Note:** Uses `docker-compose.prod.yml` with pre-built images from `mbelouar/smartbin-*`
 
-```bash
-docker-compose -f docker-compose.prod.yml exec bin_service python manage.py createsuperuser
-```
+## 🎮 Usage
 
-5. **Access the application** (same URLs as development)
-
-**Note:** Production deployment uses `docker-compose.prod.yml` which pulls images from Docker Hub instead of building locally. This ensures faster deployment and consistent builds.
-
-## 🎮 How to Use
-
-### User Flow (NFC-Based)
-
-1. **Login** at `http://localhost:3000/login`
-2. **View Map** - See available bins near you
-3. **Select Bin** - Click on a bin marker
-4. **Use NFC** - Click "Use NFC" button (waits for NFC scan)
-5. **Simulate NFC Tap**:
-   - Go to Node-RED: `http://localhost:1880`
-   - Click **"Simulate: User Taps NFC"** button
-   - Bin opens automatically after NFC verification
-6. **Simulate Trash Detection**:
-   - In Node-RED, click **"Simulate: User Puts Trash"** button
-7. **Earn Points** - Watch the points animation! (+10 points)
-8. **Track Progress** - View your eco-points in the dashboard
-
-### Admin Flow
-
-1. **Access Admin Dashboard** at `http://localhost:3000/admin`
-2. **Add New Bin**:
-   - Click "Add New Bin"
-   - Enter bin name and location
-   - Click on map to set coordinates
-   - QR code and NFC tag are auto-generated
-3. **Monitor Bins** - View real-time status and fill levels
-4. **Delete Bins** - Hover over bin card and click delete
-
-## 🔐 NFC Proximity Verification
-
-### How It Works
-
-1. User selects a bin in the app
-2. User clicks "Use NFC" button
-3. User physically taps phone on bin's NFC tag (simulated in Node-RED)
-4. Backend verifies NFC tag matches the bin
-5. Bin opens automatically if verification succeeds
-6. User deposits waste
-7. IoT sensors detect material (simulated in Node-RED)
-8. Points awarded automatically
-
-### Security Benefits
-
-- **Physical Proximity Required** - NFC range is ~4cm, ensures user is at bin
-- **No Remote Opening** - Can't open bins from distance
-- **Unique Per Bin** - Each bin has unique NFC tag ID (format: `NFC-XXXXXXXXXXXX`)
+1. Login at `http://localhost:3000`
+2. Select a bin on the map
+3. Click "Use NFC" and simulate tap in Node-RED (`http://localhost:1880`)
+4. Simulate trash detection in Node-RED to earn points
 
 ## 🛠️ Technology Stack
 
-### Frontend
-
-- **Framework**: Next.js 16 (React 19)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui
-- **Maps**: Leaflet (OpenStreetMap), Google Maps API
-- **Animations**: Framer Motion
-- **Authentication**: Clerk (user management & authentication)
-- **Package Manager**: pnpm
-
-### Backend
-
-- **Framework**: Django 4.2 + Django REST Framework
-- **Language**: Python 3.11
-- **Authentication**: Clerk backend integration + JWT
-- **API Pattern**: RESTful microservices
-- **API Gateway**: Django-based routing service
-
-### Infrastructure
-
-- **Database**: MySQL 8.0
-- **Message Broker**: Mosquitto MQTT 2.0
-- **IoT Simulator**: Node-RED
-- **Containerization**: Docker + Docker Compose
-- **Image Registry**: Docker Hub (`mbelouar/smartbin-*`)
-
-## 📁 Project Structure
-
-```
-SmartBin/
-├── frontend/                 # Next.js frontend application
-│   ├── app/                 # Next.js app router
-│   ├── components/          # React components
-│   └── lib/                 # API client, types, utilities
-├── services/
-│   ├── auth_service/        # User authentication & management
-│   ├── bin_service/         # Bin CRUD & IoT control
-│   ├── detection_service/   # Material detection & points
-│   └── reclamation_service/ # Issue reporting
-├── gateway/                 # API Gateway (routing)
-├── node-red/               # IoT simulation flows
-├── infrastructure/
-│   └── mosquitto/          # MQTT broker config
-├── Makefile                # Essential commands
-└── docker-compose.yml      # Service orchestration
-```
-
-## 📊 Database Schema
-
-The system uses **MySQL 8.0** with separate databases per service:
-
-- `auth_db` - Authentication service database
-- `bin_db` - Bin management service database
-- `detection_db` - Detection service database
-- `reclamation_db` - Reclamation service database
-
-### Essential Tables
-
-**Application Tables:**
-
-- `bins` - Smart bin information (with auto-generated QR codes & NFC tags)
-- `auth_users` - User accounts with points system (integrated with Clerk)
-- `auth_points_history` - Points transaction history
-- `bin_usage_logs` - Bin usage tracking
-- `material_detections` - Waste detection events
-- `detection_stats` - Aggregated statistics
-- `reclamations` - User complaints/reports
-
-**Django System Tables:**
-
-- `django_content_type` - Content type registry
-- `django_migrations` - Migration tracking
-- `django_session` - Session storage
-
-### Database Access
-
-- **phpMyAdmin**: `http://localhost:8080`
-  - Server: `mysql`
-  - Username: `smartbin_user`
-  - Password: `smartbin_pass`
-- **Direct MySQL**: `localhost:3306`
-  - Root password: `root_password`
+**Frontend:** Next.js 16, TypeScript, Tailwind CSS, Clerk  
+**Backend:** Django 4.2, Django REST Framework, Python 3.11  
+**Infrastructure:** MySQL 8.0, Mosquitto MQTT, Node-RED, Docker
 
 ## 🔧 Makefile Commands
 
-### Development Commands
-
 ```bash
-make help          # Show all available commands
-make start         # Start all services (development)
+make help          # Show all commands
+make start         # Start all services
 make stop          # Stop all services
-make restart       # Restart all services
-make status        # Show service status
-make logs          # Show logs (use: make logs SERVICE=frontend)
-make build         # Build all services
-make build-frontend # Build frontend image separately
-make migrate       # Run database migrations
+make migrate       # Run migrations
 make admin         # Create admin user
+make logs          # Show logs (use: make logs SERVICE=frontend)
 make clean         # Stop and remove containers/volumes
-make urls          # Show service URLs
+
+# Production
+make pull-images   # Pull images from Docker Hub
+make start-prod    # Start production services
+make migrate-prod  # Run migrations (production)
 ```
-
-### Production Deployment Commands
-
-```bash
-make pull-images   # Pull all images from Docker Hub
-make start-prod    # Start all services using Docker Hub images
-make migrate-prod  # Run database migrations (production)
-make stop-prod     # Stop production services
-```
-
-### Docker Hub Publishing Commands
-
-```bash
-make tag-all       # Tag all images for Docker Hub (requires DOCKERHUB_USER)
-make push-images   # Push all images to Docker Hub (requires DOCKERHUB_USER)
-make build-push    # Build and push all images
-make push-all      # Build, tag, and push all images (complete workflow)
-
-# Example usage:
-make push-all DOCKERHUB_USER=yourusername
-```
-
-**Note:** Docker Hub images are available at `mbelouar/smartbin-*` (e.g., `mbelouar/smartbin-frontend:latest`)
 
 ## 🐛 Troubleshooting
 
-### Services won't start
-
 ```bash
-make clean
-make start
+# Services won't start
+make clean && make start
+
+# View logs
+make logs SERVICE=frontend
+
+# Restart service
+docker-compose restart [service_name]
 ```
-
-### Frontend build errors
-
-```bash
-# Development
-docker-compose restart frontend
-
-# Production
-docker-compose -f docker-compose.prod.yml restart frontend
-```
-
-### MQTT not receiving messages
-
-```bash
-# Development
-docker-compose restart detection_service node_red
-
-# Production
-docker-compose -f docker-compose.prod.yml restart detection_service node_red
-```
-
-### Bin won't open (NFC verification)
-
-1. Make sure you clicked "Use NFC" in the app first
-2. Go to Node-RED and click "Simulate: User Taps NFC"
-3. Check Node-RED debug panel for errors
-
-### Database connection issues
-
-```bash
-# Check MySQL health
-docker-compose ps mysql
-
-# View MySQL logs
-make logs SERVICE=mysql
-
-# Restart MySQL
-docker-compose restart mysql
-```
-
-### Production deployment issues
-
-```bash
-# Ensure images are pulled
-make pull-images
-
-# Check service status
-docker-compose -f docker-compose.prod.yml ps
-
-# View production logs
-docker-compose -f docker-compose.prod.yml logs -f [service_name]
-```
-
-### View logs
-
-```bash
-# All services (development)
-make logs
-
-# Specific service (development)
-make logs SERVICE=detection_service
-
-# Production logs
-docker-compose -f docker-compose.prod.yml logs -f [service_name]
-```
-
-## 📦 Docker Images
-
-Pre-built Docker images are available on Docker Hub for easy deployment:
-
-### Available Images
-
-- `mbelouar/smartbin-auth-service:latest` - Authentication service
-- `mbelouar/smartbin-bin-service:latest` - Bin management service
-- `mbelouar/smartbin-detection-service:latest` - Material detection service
-- `mbelouar/smartbin-reclamation-service:latest` - Reclamation service
-- `mbelouar/smartbin-gateway:latest` - API Gateway
-- `mbelouar/smartbin-node-red:latest` - Node-RED IoT simulator
-- `mbelouar/smartbin-frontend:latest` - Next.js frontend application
-
-### Building and Publishing Images
-
-To build and push your own images:
-
-```bash
-# Set your Docker Hub username
-export DOCKERHUB_USER=yourusername
-
-# Build and push all images
-make push-all DOCKERHUB_USER=yourusername
-```
-
-This will:
-
-1. Build all service images
-2. Build the frontend image
-3. Tag all images with your Docker Hub username
-4. Push all images to Docker Hub
-
-**Note:** Make sure you're logged in to Docker Hub first: `docker login`
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📝 License
 
-This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
-
-- OpenStreetMap for map tiles
-- Node-RED for IoT simulation
-- shadcn/ui for beautiful UI components
-
----
-
-**Built with ❤️ for a sustainable future** 🌍♻️
+MIT License
