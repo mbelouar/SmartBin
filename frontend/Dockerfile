@@ -17,15 +17,14 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy all source files (excluding what's in .dockerignore)
 COPY . .
 
-# Accept build arguments for environment variables (optional)
-ARG NEXT_PUBLIC_AUTH_SERVICE_URL
-ARG NEXT_PUBLIC_BIN_SERVICE_URL
-ARG NEXT_PUBLIC_DETECTION_SERVICE_URL
-ARG NEXT_PUBLIC_RECLAMATION_SERVICE_URL
+# Build arguments (can be passed during build)
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8001
+ARG NEXT_PUBLIC_BIN_SERVICE_URL=http://localhost:8002
+ARG NEXT_PUBLIC_DETECTION_SERVICE_URL=http://localhost:8003
+ARG NEXT_PUBLIC_RECLAMATION_SERVICE_URL=http://localhost:8004
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -34,9 +33,7 @@ ENV NEXT_PUBLIC_AUTH_SERVICE_URL=${NEXT_PUBLIC_AUTH_SERVICE_URL}
 ENV NEXT_PUBLIC_BIN_SERVICE_URL=${NEXT_PUBLIC_BIN_SERVICE_URL}
 ENV NEXT_PUBLIC_DETECTION_SERVICE_URL=${NEXT_PUBLIC_DETECTION_SERVICE_URL}
 ENV NEXT_PUBLIC_RECLAMATION_SERVICE_URL=${NEXT_PUBLIC_RECLAMATION_SERVICE_URL}
-
-# Verify lib directory exists (for debugging)
-RUN ls -la lib/ || echo "lib directory not found"
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
 # Build the Next.js application
 RUN npm install -g pnpm && \

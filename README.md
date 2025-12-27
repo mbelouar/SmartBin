@@ -351,47 +351,6 @@ make logs
 make logs SERVICE=detection_service
 ```
 
-## 🚀 CI/CD - Docker Hub Deployment
-
-This project includes automated CI/CD using GitHub Actions to build and push Docker images to Docker Hub.
-
-### Quick Setup
-
-1. **Add GitHub Secrets:**
-   - Go to your repository → Settings → Secrets and variables → Actions
-   - Add `DOCKER_USERNAME` (your Docker Hub username)
-   - Add `DOCKER_PASSWORD` (your Docker Hub password or access token)
-
-2. **Push to main/master branch:**
-   - The workflow automatically builds and pushes all 7 Docker images
-   - Images are tagged with `latest` and the commit SHA
-
-3. **Access your images:**
-   ```bash
-   docker pull your-username/smartbin-frontend:latest
-   docker pull your-username/smartbin-gateway:latest
-   # ... and so on
-   ```
-
-### What Gets Built
-
-The CI/CD pipeline builds and pushes these images:
-- `smartbin-frontend` - Next.js frontend
-- `smartbin-gateway` - API Gateway
-- `smartbin-auth-service` - Authentication service
-- `smartbin-bin-service` - Bin management service
-- `smartbin-detection-service` - Detection service
-- `smartbin-reclamation-service` - Reclamation service
-- `smartbin-node-red` - Node-RED IoT simulator
-
-### Workflow Triggers
-
-- ✅ Push to `main`/`master` branch
-- ✅ Manual trigger (Actions tab → Run workflow)
-- ✅ Pull requests (builds only, doesn't push)
-
-📖 **For detailed setup instructions, see [.github/DEPLOYMENT.md](.github/DEPLOYMENT.md)**
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
